@@ -6,6 +6,7 @@
 <title>Merka POS</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -379,8 +380,67 @@ select option{background:var(--sur);}
 .overlay-sidebar.open{display:block;}
 
 ::-webkit-scrollbar{width:5px;height:5px;}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--dim);border-radius:3px;}
+
+
+/* ── PERMISOS / AUDIT ── */
+.perm-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0;}
+.perm-item{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--radius-sm);}
+.perm-item label{font-size:12px;font-weight:500;color:var(--text);text-transform:none;letter-spacing:0;font-family:var(--sans);cursor:pointer;}
+.perm-item input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--acc);flex-shrink:0;}
+
+/* ── PAGO MIXTO ── */
+.mixed-pay{display:flex;flex-direction:column;gap:6px;margin:8px 0;}
+.mixed-pay-row{display:flex;gap:8px;align-items:center;}
+.mixed-pay-label{font-size:11px;font-weight:700;min-width:90px;color:var(--muted);}
+.mixed-pay-input{flex:1;padding:7px 10px;font-size:13px;}
+.mixed-pay-total{display:flex;justify-content:space-between;padding:8px 12px;background:var(--sur2);border-radius:var(--radius-sm);font-size:12px;font-weight:700;}
+
+/* ── BARCODE ── */
+.barcode-btn{
+  display:flex;align-items:center;gap:6px;padding:8px 12px;
+  background:var(--sur2);border:1.5px solid var(--bdr);border-radius:var(--radius-sm);
+  cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);transition:all 0.15s;
+}
+.barcode-btn:hover,.barcode-btn.active{border-color:var(--acc);color:var(--acc);background:var(--acc-dim);}
+.barcode-indicator{width:8px;height:8px;border-radius:50%;background:var(--dim);}
+.barcode-indicator.on{background:var(--green);box-shadow:0 0 6px var(--green);}
+
+/* ── GASTOS ── */
+.gasto-badge{background:var(--red-dim);color:var(--red);border:1px solid rgba(220,38,38,0.2);}
+
+/* ── REPORTES GRAFICOS ── */
+.report-tabs{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;}
+.report-tab{padding:7px 16px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(--bdr);background:transparent;color:var(--muted);transition:all 0.15s;}
+.report-tab:hover{color:var(--text);border-color:var(--dim);}
+.report-tab.active{background:var(--acc);border-color:var(--acc);color:#fff;}
+.chart-card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow-sm);margin-bottom:16px;}
+.chart-title{font-size:13px;font-weight:700;margin-bottom:4px;}
+.chart-sub{font-size:11px;color:var(--muted);margin-bottom:16px;}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;}
+.kpi-card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow-sm);text-align:center;}
+.kpi-val{font-family:var(--mono);font-size:22px;font-weight:700;letter-spacing:-1px;margin-top:6px;}
+.kpi-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:4px;}
+
+/* ── CONFIG ── */
+.config-section{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--radius-lg);padding:22px;margin-bottom:16px;box-shadow:var(--shadow-sm);}
+.config-section-title{font-size:13px;font-weight:700;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--bdr);}
+.logo-preview{width:120px;height:60px;object-fit:contain;border:1.5px solid var(--bdr);border-radius:var(--radius-sm);padding:6px;background:var(--sur2);}
+
+/* ── CREDITO CLIENTE ── */
+.credito-badge{background:rgba(37,99,235,0.08);color:var(--blue);border:1px solid rgba(37,99,235,0.2);font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:5px;}
+.credito-over{background:var(--red-dim);color:var(--red);border:1px solid rgba(220,38,38,0.2);}
+
+/* ── AUDIT LOG ── */
+.audit-row{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--bdr);font-size:12px;}
+.audit-row:last-child{border-bottom:none;}
+.audit-time{font-family:var(--mono);font-size:10px;color:var(--muted);white-space:nowrap;min-width:120px;}
+.audit-user{font-weight:700;color:var(--text);min-width:100px;}
+.audit-action{color:var(--muted);}
+.audit-detail{color:var(--acc);font-family:var(--mono);font-size:11px;}
 
 /* ═══════════════════════════════════
    WEIGHT PICKER OVERLAY
@@ -676,7 +736,13 @@ select option{background:var(--sur);}
       <div class="nav-item" onclick="showPage('proveedores')"><span class="nav-ic">◈</span>Proveedores</div>
       <div class="nav-item" onclick="showPage('pagar')" id="nav-pagar"><span class="nav-ic">◎</span>Por Pagar</div>
       <div class="nav-section">Operaciones</div>
+      <div class="nav-item" onclick="showPage('gastos')" id="nav-gastos"><span class="nav-ic">💸</span>Gastos</div>
       <div class="nav-item" onclick="showPage('cierre')"><span class="nav-ic">⬫</span>Cierre de Caja</div>
+      <div class="nav-section">Análisis</div>
+      <div class="nav-item" onclick="showPage('reportes')"><span class="nav-ic">◈</span>Reportes</div>
+      <div class="nav-section">Sistema</div>
+      <div class="nav-item" onclick="showPage('auditoria')" id="nav-auditoria"><span class="nav-ic">◷</span>Auditoría</div>
+      <div class="nav-item" onclick="showPage('configuracion')"><span class="nav-ic">⊞</span>Configuración</div>
       <div class="nav-item" onclick="showPage('usuarios')" id="nav-usuarios"><span class="nav-ic">⊞</span>Usuarios</div>
     </nav>
     <div class="session-bar" onclick="openSwitchOverlay()">
@@ -896,10 +962,10 @@ function showPage(page){
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
   const navEl = document.querySelector(`[onclick="showPage('${page}')"]`);
   if(navEl) navEl.classList.add('active');
-  const titles = {terminal:'Terminal de Ventas',dashboard:'Dashboard',calendario:'Calendario',inventario:'Inventario',ventas:'Ventas del Día',clientes:'Clientes',cobrar:'Cuentas por Cobrar',proveedores:'Proveedores',pagar:'Cuentas por Pagar',cierre:'Cierre de Caja',usuarios:'Usuarios'};
+  const titles = {terminal:'Terminal de Ventas',dashboard:'Dashboard',calendario:'Calendario',inventario:'Inventario',ventas:'Ventas del Día',clientes:'Clientes',cobrar:'Cuentas por Cobrar',proveedores:'Proveedores',pagar:'Cuentas por Pagar',gastos:'Gastos',cierre:'Cierre de Caja',reportes:'Reportes',auditoria:'Auditoría',configuracion:'Configuración',usuarios:'Usuarios'};
   document.getElementById('pageTitle').textContent = titles[page]||page;
   document.getElementById('topbarDate').textContent = todayLabel();
-  const pages = {terminal:renderTerminal,dashboard:renderDashboard,calendario:renderCalendario,inventario:renderInventario,ventas:renderVentas,clientes:renderClientes,cobrar:renderCobrar,proveedores:renderProveedores,pagar:renderPagar,cierre:renderCierre,usuarios:renderUsuarios};
+  const pages = {terminal:renderTerminal,dashboard:renderDashboard,calendario:renderCalendario,inventario:renderInventario,ventas:renderVentas,clientes:renderClientes,cobrar:renderCobrar,proveedores:renderProveedores,pagar:renderPagar,gastos:renderGastos,cierre:renderCierre,reportes:renderReportes,auditoria:renderAuditoria,configuracion:renderConfiguracion,usuarios:renderUsuarios};
   const isTerminal = page==='terminal';
   document.getElementById('content').style.padding = isTerminal ? '0' : '24px';
   if(pages[page]) pages[page]();
@@ -1003,9 +1069,9 @@ function updateSessionUI(){
 function initSampleData(){
   if(!DB.get('usuarios').length){
     DB.set('usuarios',[
-      {id:1,nombre:'Alexander Estrada',rol:'Administrador',pin:'1234',activo:true},
-      {id:2,nombre:'María González',rol:'Cajero',pin:'0000',activo:true},
-      {id:3,nombre:'Pedro Ramírez',rol:'Cajero',pin:'',activo:true},
+      {id:1,nombre:'Alexander Estrada',rol:'Administrador',pin:'1234',activo:true,permisos:{verCostos:true,editarInventario:true,eliminarVentas:true,verReportes:true,gestionarUsuarios:true,verGastos:true,abrirCaja:true}},
+      {id:2,nombre:'María González',rol:'Cajero',pin:'0000',activo:true,permisos:{verCostos:false,editarInventario:false,eliminarVentas:false,verReportes:false,gestionarUsuarios:false,verGastos:false,abrirCaja:true}},
+      {id:3,nombre:'Pedro Ramírez',rol:'Cajero',pin:'',activo:true,permisos:{verCostos:false,editarInventario:false,eliminarVentas:false,verReportes:false,gestionarUsuarios:false,verGastos:false,abrirCaja:true}},
     ]);
   }
   if(!DB.get('productos').length){
@@ -1053,6 +1119,16 @@ function initSampleData(){
       {id:2,nombre:'Distribuidora Mayorista',contacto:'Ana Pérez',telefono:'+56 9 8765 4321',email:'ana@distmay.cl',direccion:'Av. Industrial 890',ciudad:'Santiago',nota:'Abarrotes y limpieza'},
     ]);
   }
+  if(!DB.get('gastos').length){
+    DB.set('gastos',[
+      {id:1,concepto:'Arriendo local',monto:350000,fecha:today(),categoria:'Arriendo',nota:'Mes de marzo',cajero:'Alexander Estrada'},
+      {id:2,concepto:'Servicios básicos',monto:45000,fecha:today(),categoria:'Servicios',nota:'Agua y luz',cajero:'Alexander Estrada'},
+    ]);
+  }
+  if(!DB.get('auditlog').length) DB.set('auditlog',[]);
+  if(!DB.get('config').length || !DB.get('config').businessName){
+    DB.set('config',{businessName:'Mi Negocio',rut:'',direccion:'',telefono:'',email:'',logo:'',whatsapp:'',moneda:'CLP'});
+  }
   if(!DB.get('pagar').length){
     DB.set('pagar',[
       {id:1,proveedorId:1,concepto:'Pedido quesos semana 1',monto:85000,pagado:0,fecha:today(),vencimiento:'2026-03-25',pagos:[]},
@@ -1097,8 +1173,15 @@ function renderTerminal(){
       <div class="terminal-right" style="position:relative">
         <div class="terminal-header">
           <div class="terminal-header-title">Carrito</div>
-          <div class="terminal-header-count" id="t-cart-count">0 items</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="terminal-header-count" id="t-cart-count">0 items</div>
+            <div class="barcode-btn" id="barcode-toggle-btn" onclick="toggleBarcodeMode()" title="Lector de código de barras">
+              <div class="barcode-indicator" id="barcode-indicator"></div>
+              <span>Barcode</span>
+            </div>
+          </div>
         </div>
+        <input id="barcode-input" style="position:absolute;opacity:0;width:1px;height:1px;top:0;left:0" tabindex="-1">
         <div class="terminal-cart" id="t-cart-list">
           <div class="t-cart-empty">
             <div class="t-cart-empty-icon">🛒</div>
@@ -1114,10 +1197,34 @@ function renderTerminal(){
               ${clientes.map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('')}
             </select>
           </div>
-          <div class="t-method-row">
-            ${['Efectivo','Transferencia','Débito','Crédito'].map(m=>`
-              <div class="t-method-btn${m===tMetodo?' active':''}" onclick="tMetodo='${m}';document.querySelectorAll('.t-method-btn').forEach(x=>x.classList.remove('active'));this.classList.add('active')">${m}</div>
+          <div class="t-method-row" id="t-method-row">
+            ${['Efectivo','Transferencia','Débito','Crédito','Mixto'].map(m=>`
+              <div class="t-method-btn${m===tMetodo?' active':''}" onclick="selectMetodo('${m}')">${m}</div>
             `).join('')}
+          </div>
+          <div id="t-mixed-pay" style="display:none">
+            <div class="mixed-pay">
+              <div class="mixed-pay-row">
+                <span class="mixed-pay-label">Efectivo</span>
+                <input class="mixed-pay-input" type="number" id="mix-efectivo" placeholder="0" oninput="calcMixed()">
+              </div>
+              <div class="mixed-pay-row">
+                <span class="mixed-pay-label">Transferencia</span>
+                <input class="mixed-pay-input" type="number" id="mix-transf" placeholder="0" oninput="calcMixed()">
+              </div>
+              <div class="mixed-pay-row">
+                <span class="mixed-pay-label">Débito</span>
+                <input class="mixed-pay-input" type="number" id="mix-debito" placeholder="0" oninput="calcMixed()">
+              </div>
+              <div class="mixed-pay-total">
+                <span>Ingresado</span>
+                <span id="mix-total-ing" style="color:var(--acc);font-family:var(--mono)">$0</span>
+              </div>
+              <div class="mixed-pay-total" id="mix-vuelto-row" style="display:none">
+                <span id="mix-vuelto-label">Vuelto</span>
+                <span id="mix-vuelto-val" style="color:var(--green);font-family:var(--mono)">$0</span>
+              </div>
+            </div>
           </div>
           <div class="t-total-box">
             <div class="t-total-label">Total</div>
@@ -1339,6 +1446,16 @@ function renderCart(){
 
 function cobrarVenta(){
   if(!tCart.length) return;
+  const total = tCart.reduce((s,i)=>s+Math.round(i.precio*i.qty),0);
+  // Validate mixed payment
+  if(tMetodo==='Mixto'){
+    const ef = parseInt(document.getElementById('mix-efectivo')?.value)||0;
+    const tr = parseInt(document.getElementById('mix-transf')?.value)||0;
+    const db = parseInt(document.getElementById('mix-debito')?.value)||0;
+    if(ef+tr+db < total){
+      if(!confirm(`Monto ingresado (${fmt(ef+tr+db)}) es menor al total (${fmt(total)}). ¿Continuar?`)) return;
+    }
+  }
   const items = tCart.map(i=>({
     productoId:i.productoId,
     nombre:i.nombre + (i.esPeso ? ` (${i.qtyLabel})` : ''),
@@ -1348,12 +1465,34 @@ function cobrarVenta(){
     esPeso:i.esPeso||false,
     qtyLabel:i.qtyLabel||null
   }));
-  const total = items.reduce((s,i)=>s+i.subtotal,0);
   const clienteVal = document.getElementById('t-cliente')?.value || tCliente;
+  // Build metodo string for mixed
+  let metodoFinal = tMetodo;
+  if(tMetodo==='Mixto'){
+    const ef = parseInt(document.getElementById('mix-efectivo')?.value)||0;
+    const tr = parseInt(document.getElementById('mix-transf')?.value)||0;
+    const db = parseInt(document.getElementById('mix-debito')?.value)||0;
+    const partes = [];
+    if(ef>0) partes.push(`Efectivo:${fmt(ef)}`);
+    if(tr>0) partes.push(`Transf:${fmt(tr)}`);
+    if(db>0) partes.push(`Débito:${fmt(db)}`);
+    metodoFinal = partes.join(' + ');
+  }
+  // Check credit limit if client selected
+  if(clienteVal && tMetodo==='Crédito'){
+    const cliente = DB.get('clientes').find(c=>c.nombre===clienteVal);
+    if(cliente && cliente.limiteCredito > 0){
+      const deudaActual = DB.get('cobrar').filter(c=>c.clienteId===cliente.id).reduce((s,c)=>s+(c.monto-c.pagado),0);
+      if(deudaActual + total > cliente.limiteCredito){
+        alert(`Límite de crédito excedido.\nDeuda actual: ${fmt(deudaActual)}\nLímite: ${fmt(cliente.limiteCredito)}\nDisponible: ${fmt(Math.max(0,cliente.limiteCredito-deudaActual))}`);
+        return;
+      }
+    }
+  }
   const venta = {
     id:Date.now(),fecha:today(),items,total,
     cliente:clienteVal,nota:'',
-    metodo:tMetodo,
+    metodo:metodoFinal,
     cajero:session?session.nombre:'—'
   };
   // Descontar stock (peso en kg float, unidades en entero)
@@ -1369,8 +1508,8 @@ function cobrarVenta(){
   const ventas = DB.get('ventas');
   ventas.push(venta);
   DB.set('ventas', ventas);
-  // Sync a n8n (async, no bloquea)
   DB.sync('ventas', venta);
+  logAudit('Venta registrada', 'Terminal', `${fmt(venta.total)} · ${venta.metodo} · ${venta.items.length} productos`);
   // Sync stock actualizado de cada producto afectado
   items.forEach(i=>{
     const p = DB.get('productos').find(x=>x.id===i.productoId);
@@ -1397,7 +1536,10 @@ function showSuccessFlash(total, metodo, ventaId){
     <div class="t-success-total">${fmt(total)}</div>
     <div class="t-success-label">Venta registrada</div>
     <div class="t-success-method">${metodo}</div>
-    ${ventaId?`<button onclick="printBoleta(${ventaId})" style="margin-top:12px;padding:8px 20px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans)">🖨 Imprimir boleta</button>`:''}
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      ${ventaId?`<button onclick="printBoleta(${ventaId})" style="padding:8px 16px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans)">🖨 Boleta</button>`:''}
+      ${ventaId&&DB.get('config')?.whatsapp?`<button onclick="sendBoletaWhatsapp(${ventaId})" style="padding:8px 16px;background:#25d366;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans)">💬 WhatsApp</button>`:''}
+    </div>
   `;
   right.appendChild(flash);
   setTimeout(()=>{ if(flash.parentNode) flash.parentNode.removeChild(flash); }, 3500);
@@ -1550,7 +1692,7 @@ function openProductoModal(p=null){
     <div class="modal-title">${p?'Editar Producto':'Nuevo Producto'}</div>
     <div class="form-grid">
       <div class="form-group"><label>Nombre</label><input id="f-nombre" value="${p?p.nombre:''}" placeholder="Ej: Leche Entera 1L"></div>
-      <div class="form-group"><label>SKU</label><input id="f-sku" value="${p?p.sku:''}" placeholder="LE-001"></div>
+      <div class="form-group"><label>SKU / Código de barras</label><input id="f-sku" value="${p?p.sku:''}" placeholder="LE-001 o código EAN"></div>
       <div class="form-group"><label>Precio Compra</label><input id="f-compra" type="number" value="${p?p.precioCompra:''}" placeholder="850"></div>
       <div class="form-group"><label>Precio Venta</label><input id="f-venta" type="number" value="${p?p.precioVenta:''}" placeholder="1200"></div>
       <div class="form-group"><label>Stock</label><input id="f-stock" type="number" value="${p?p.stock:''}" placeholder="0"></div>
@@ -1595,6 +1737,7 @@ function addVolRow(){
   document.getElementById('vol-list').appendChild(div);
 }
 function saveProducto(id, isEdit){
+  if(!checkPerm('editarInventario','No tienes permiso para modificar el inventario.')) return;
   const vols = [...document.querySelectorAll('#vol-list .vol-row')].map(r=>({
     desde:parseInt(r.querySelector('.vol-desde').value)||0,
     precio:parseInt(r.querySelector('.vol-precio').value)||0
@@ -1605,14 +1748,17 @@ function saveProducto(id, isEdit){
   if(isEdit) productos = productos.map(p=>p.id===id?prod:p);
   else productos.push(prod);
   DB.set('productos', productos);
-  DB.sync('productos', prod); // → n8n async, no bloquea UI
+  DB.sync('productos', prod);
+  logAudit(isEdit?'Producto editado':'Producto creado','Inventario',prod.nombre);
   closeModal(); renderInventario();
 }
 async function deleteProducto(id){
   if(!confirm('¿Eliminar producto?')) return;
+  const dp=DB.get('productos').find(p=>p.id===id);
   DB.set('productos', DB.get('productos').filter(p=>p.id!==id));
   renderInventario();
   await DB.remove('productos', id);
+  logAudit('Producto eliminado','Inventario',dp?.nombre||id);
 }
 
 // ═══ CLIENTES ═══
@@ -1639,7 +1785,10 @@ function renderClientes(search=''){
             <td class="td-muted">${c.empresa||'—'}</td>
             <td class="td-mono">${c.telefono||'—'}</td>
             <td style="font-size:12px">${c.ciudad||'—'}</td>
-            <td class="${pend>0?'td-acc':'td-green'}">${fmt(pend)}</td>
+            <td>
+              <span class="${pend>0?'td-acc':'td-green'}">${fmt(pend)}</span>
+              ${c.limiteCredito>0?`<br><span class="credito-badge ${pend>c.limiteCredito?'credito-over':''}">Límite ${fmt(c.limiteCredito)}</span>`:''}
+            </td>
             <td style="white-space:nowrap;display:flex;gap:4px;">
               <button class="btn btn-ghost btn-sm btn-icon" onclick='openClienteModal(${JSON.stringify(c)})'>✏️</button>
               <button class="btn btn-danger btn-sm btn-icon" onclick="deleteCliente(${c.id})">🗑</button>
@@ -1662,6 +1811,8 @@ function openClienteModal(c=null){
       <div class="form-group span2"><label>Dirección</label><input id="c-dir" value="${c?c.direccion:''}" placeholder="Av. Principal 123"></div>
       <div class="form-group"><label>Ciudad</label><input id="c-ciudad" value="${c?c.ciudad:''}" placeholder="Santiago"></div>
       <div class="form-group span2"><label>Nota</label><textarea id="c-nota">${c?c.nota:''}</textarea></div>
+      <div class="form-group"><label>Límite de crédito ($)</label><input id="c-limite" type="number" value="${c?c.limiteCredito||0:0}" placeholder="0 = sin límite"></div>
+      <div class="form-group"><label>Días de crédito</label><input id="c-dias" type="number" value="${c?c.diasCredito||0:0}" placeholder="0 = sin crédito"></div>
     </div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
@@ -1669,7 +1820,7 @@ function openClienteModal(c=null){
     </div>`);
 }
 function saveCliente(id,isEdit){
-  const cl = {id,nombre:document.getElementById('c-nombre').value.trim(),empresa:document.getElementById('c-empresa').value.trim(),rut:document.getElementById('c-rut').value.trim(),telefono:document.getElementById('c-tel').value.trim(),email:document.getElementById('c-email').value.trim(),direccion:document.getElementById('c-dir').value.trim(),ciudad:document.getElementById('c-ciudad').value.trim(),nota:document.getElementById('c-nota').value.trim()};
+  const cl = {id,nombre:document.getElementById('c-nombre').value.trim(),empresa:document.getElementById('c-empresa').value.trim(),rut:document.getElementById('c-rut').value.trim(),telefono:document.getElementById('c-tel').value.trim(),email:document.getElementById('c-email').value.trim(),direccion:document.getElementById('c-dir').value.trim(),ciudad:document.getElementById('c-ciudad').value.trim(),nota:document.getElementById('c-nota').value.trim(),limiteCredito:parseInt(document.getElementById('c-limite')?.value)||0,diasCredito:parseInt(document.getElementById('c-dias')?.value)||0};
   if(!cl.nombre) return alert('Nombre obligatorio');
   let clientes = DB.get('clientes');
   if(isEdit) clientes = clientes.map(c=>c.id===id?cl:c);
@@ -1731,8 +1882,11 @@ function renderVentas(){
     }).join('')||'<div class="empty"><div class="empty-icon">◻</div><div class="empty-title">Sin ventas</div></div>'}`;
 }
 function deleteVenta(id){
+  if(!checkPerm('eliminarVentas','No tienes permiso para eliminar ventas.')) return;
   if(!confirm('¿Eliminar venta?')) return;
+  const dv=DB.get('ventas').find(v=>v.id===id);
   DB.set('ventas',DB.get('ventas').filter(v=>v.id!==id));
+  logAudit('Venta eliminada','Ventas',`ID ${id} · ${fmt(dv?.total||0)}`);
   renderVentas();
 }
 
@@ -1878,6 +2032,10 @@ function renderCierre(){
         <div class="cierre-block-title">Conteo de caja</div>
         ${cierreHoy ? `
           <div class="alert alert-success">Caja cerrada el ${cierreHoy.fecha} por ${cierreHoy.cajero}</div>
+          <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <button class="btn btn-ghost btn-sm" onclick="printCierre(${cierreHoy.id})">🖨 Imprimir cierre</button>
+            <button class="btn btn-success btn-sm" onclick="sendCierreWhatsapp()">💬 Enviar por WhatsApp</button>
+          </div>
           <div class="cierre-row"><span class="cierre-row-label">Fondo inicial</span><span class="cierre-row-val">${fmt(cierreHoy.fondoInicial)}</span></div>
           <div class="cierre-row"><span class="cierre-row-label">Ventas efectivo</span><span class="cierre-row-val">${fmt(cierreHoy.ventasEfectivo)}</span></div>
           <div class="cierre-row"><span class="cierre-row-label">Total esperado</span><span class="cierre-row-val">${fmt(cierreHoy.totalEsperado)}</span></div>
@@ -1976,8 +2134,9 @@ function renderUsuarios(){
           <div class="user-card-info">
             <div class="user-card-name">${u.nombre}</div>
             <div class="user-card-meta">
-              <span class="badge ${u.rol==='Administrador'?'badge-acc':'badge-muted'}" style="margin-right:6px">${u.rol}</span>
-              ${u.pin?'<span class="badge badge-blue">PIN activo</span>':'<span class="badge badge-muted">Sin PIN</span>'}
+              <span class="badge ${u.rol==='Administrador'?'badge-acc':u.rol==='Supervisor'?'badge-blue':'badge-muted'}" style="margin-right:6px">${u.rol}</span>
+              ${u.pin?'<span class="badge badge-blue" style="margin-right:4px">PIN activo</span>':'<span class="badge badge-muted" style="margin-right:4px">Sin PIN</span>'}
+              ${u.rol!=='Administrador'?`<span class="badge badge-muted">${Object.values(u.permisos||{}).filter(Boolean).length} permisos</span>`:'<span class="badge badge-acc">Acceso total</span>'}
             </div>
           </div>
           <div class="user-card-actions">
@@ -1990,6 +2149,16 @@ function renderUsuarios(){
 }
 function openUsuarioModal(u=null){
   const id = u?u.id:Date.now();
+  const p = u?.permisos||{};
+  const perms = [
+    {key:'verCostos',label:'Ver precios de costo'},
+    {key:'editarInventario',label:'Agregar/editar inventario'},
+    {key:'eliminarVentas',label:'Eliminar ventas'},
+    {key:'verReportes',label:'Ver reportes y ganancias'},
+    {key:'verGastos',label:'Ver y registrar gastos'},
+    {key:'gestionarUsuarios',label:'Gestionar usuarios'},
+    {key:'abrirCaja',label:'Abrir/cerrar caja'},
+  ];
   openModal(`
     <div class="modal-title">${u?'Editar Usuario':'Nuevo Usuario'}</div>
     <div class="form-grid">
@@ -2008,6 +2177,17 @@ function openUsuarioModal(u=null){
         </select>
       </div>
       <div class="form-group span2"><label>PIN (opcional, máx 6 dígitos)</label><input id="u-pin" type="password" value="${u?u.pin:''}" placeholder="Dejar vacío para no usar PIN" maxlength="6"></div>
+      <div class="form-group span2">
+        <label>Permisos</label>
+        <div class="perm-grid">
+          ${perms.map(pm=>`
+            <div class="perm-item">
+              <input type="checkbox" id="perm-${pm.key}" ${p[pm.key]||(!u&&pm.key==='abrirCaja')?'checked':''}>
+              <label for="perm-${pm.key}">${pm.label}</label>
+            </div>
+          `).join('')}
+        </div>
+      </div>
     </div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
@@ -2015,7 +2195,10 @@ function openUsuarioModal(u=null){
     </div>`);
 }
 function saveUsuario(id,isEdit){
-  const u = {id,nombre:document.getElementById('u-nombre').value.trim(),rol:document.getElementById('u-rol').value,activo:document.getElementById('u-activo').value==='true',pin:document.getElementById('u-pin').value};
+  const permKeys = ['verCostos','editarInventario','eliminarVentas','verReportes','verGastos','gestionarUsuarios','abrirCaja'];
+  const permisos = {};
+  permKeys.forEach(k=>{ const el=document.getElementById('perm-'+k); permisos[k]=el?el.checked:false; });
+  const u = {id,nombre:document.getElementById('u-nombre').value.trim(),rol:document.getElementById('u-rol').value,activo:document.getElementById('u-activo').value==='true',pin:document.getElementById('u-pin').value,permisos};
   if(!u.nombre) return alert('Nombre obligatorio');
   let usuarios = DB.get('usuarios');
   if(isEdit) usuarios = usuarios.map(x=>x.id===id?u:x);
@@ -2084,7 +2267,7 @@ function renderCalendario(){
           <td><span class="badge ${v.metodo==='Efectivo'?'badge-green':v.metodo==='Transferencia'?'badge-blue':'badge-muted'}">${v.metodo||'—'}</span></td>
           <td class="td-muted">${v.cajero||'—'}</td>
           <td class="td-acc">${fmt(v.total)}</td>
-          <td><button class="btn btn-ghost btn-sm" onclick="printBoleta(${v.id})">🖨 Boleta</button></td>
+          <td style="display:flex;gap:4px"><button class="btn btn-ghost btn-sm" onclick="printBoleta(${v.id})">🖨</button>${DB.get('config')?.whatsapp?`<button class="btn btn-success btn-sm" onclick="sendBoletaWhatsapp(${v.id})">💬</button>`:''}</td>
         </tr>`).join('')}
       </table></div>
     </div>` : `<div class="section-card"><div style="text-align:center;padding:40px;color:var(--muted)">Sin ventas el ${selDate}</div></div>`}
@@ -2295,10 +2478,12 @@ function updatePagarBadge(){
 function printBoleta(ventaId){
   const venta = DB.get('ventas').find(v=>v.id===ventaId);
   if(!venta) return;
+  const cfg = DB.get('config')||{};
+  const biz = cfg.businessName || 'Mi Negocio';
   const win = window.open('','_blank','width=400,height=600');
   win.document.write(`<!DOCTYPE html><html><head>
     <meta charset="UTF-8">
-    <title>Boleta #${ventaId}</title>
+    <title>Boleta #${String(ventaId).slice(-6)}</title>
     <style>
       *{margin:0;padding:0;box-sizing:border-box;}
       body{font-family:'Courier New',monospace;font-size:13px;color:#000;padding:20px;max-width:300px;margin:0 auto;}
@@ -2312,10 +2497,14 @@ function printBoleta(ventaId){
     </style>
   </head><body>
     <div class="center">
-      <div class="title">MERKA POS</div>
-      <div class="small">Sistema de Gestión Comercial</div>
+      ${cfg.logo?`<img src="${cfg.logo}" style="max-width:120px;max-height:50px;object-fit:contain;margin-bottom:6px"><br>`:''}
+      <div class="title">${biz}</div>
+      ${cfg.rut?`<div class="small">RUT: ${cfg.rut}</div>`:''}
+      ${cfg.direccion?`<div class="small">${cfg.direccion}</div>`:''}
+      ${cfg.telefono?`<div class="small">Tel: ${cfg.telefono}</div>`:''}
     </div>
     <div class="divider"></div>
+    <div class="row"><span>Boleta #</span><span>${String(ventaId).slice(-6)}</span></div>
     <div class="row"><span>Fecha:</span><span>${venta.fecha}</span></div>
     <div class="row"><span>Cajero:</span><span>${venta.cajero||'—'}</span></div>
     ${venta.cliente?`<div class="row"><span>Cliente:</span><span>${venta.cliente}</span></div>`:''}
@@ -2329,13 +2518,78 @@ function printBoleta(ventaId){
     <div class="divider"></div>
     <div class="total-row"><span>TOTAL</span><span>$${Math.round(venta.total).toLocaleString('es-CL')}</span></div>
     <div class="divider"></div>
-    <div class="center small" style="margin-top:8px;">
-      ¡Gracias por su compra!<br>
-      Boleta #${String(ventaId).slice(-6)}
-    </div>
+    <div class="center small" style="margin-top:8px;">¡Gracias por su compra!</div>
     <script>window.onload=()=>{window.print();}<\/script>
   </body></html>`);
   win.document.close();
+}
+
+function printCierre(cierreId){
+  const c = DB.get('cierres').find(x=>x.id===cierreId) || DB.get('cierres').find(x=>x.fecha===today());
+  if(!c) return;
+  const cfg = DB.get('config')||{};
+  const win = window.open('','_blank','width=400,height=500');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cierre ${c.fecha}</title>
+  <style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Courier New',monospace;font-size:13px;padding:20px;max-width:300px;margin:0 auto;}
+  .center{text-align:center;}.divider{border-top:1px dashed #000;margin:10px 0;}.row{display:flex;justify-content:space-between;padding:4px 0;}
+  .total{display:flex;justify-content:space-between;padding:6px 0;font-size:16px;font-weight:bold;}@media print{body{padding:0;}}</style></head><body>
+  <div class="center"><div style="font-size:16px;font-weight:bold">${cfg.businessName||'Mi Negocio'}</div>
+  ${cfg.rut?`<div style="font-size:11px">RUT: ${cfg.rut}</div>`:''}
+  <div style="font-size:14px;font-weight:bold;margin-top:8px">CIERRE DE CAJA</div></div>
+  <div class="divider"></div>
+  <div class="row"><span>Fecha:</span><span>${c.fecha}</span></div>
+  <div class="row"><span>Cajero:</span><span>${c.cajero}</span></div>
+  <div class="divider"></div>
+  <div class="row"><span>Total ventas:</span><span>$${Math.round(c.totalVentas).toLocaleString('es-CL')}</span></div>
+  <div class="row"><span>Ventas efectivo:</span><span>$${Math.round(c.ventasEfectivo).toLocaleString('es-CL')}</span></div>
+  <div class="row"><span>Fondo inicial:</span><span>$${Math.round(c.fondoInicial).toLocaleString('es-CL')}</span></div>
+  <div class="row"><span>Total esperado:</span><span>$${Math.round(c.totalEsperado).toLocaleString('es-CL')}</span></div>
+  <div class="row"><span>Conteo real:</span><span>$${Math.round(c.conteoReal).toLocaleString('es-CL')}</span></div>
+  <div class="divider"></div>
+  <div class="total"><span>${c.diferencia>=0?'SOBRANTE':'FALTANTE'}</span><span>$${Math.round(Math.abs(c.diferencia)).toLocaleString('es-CL')}</span></div>
+  ${c.nota?`<div class="divider"></div><div style="font-size:11px">Nota: ${c.nota}</div>`:''}
+  <script>window.onload=()=>{window.print();}<\/script></body></html>`);
+  win.document.close();
+}
+
+function sendCierreWhatsapp(){
+  const hoy = today();
+  const c = DB.get('cierres').find(x=>x.fecha===hoy);
+  if(!c){ alert('No hay cierre para hoy'); return; }
+  const cfg = DB.get('config')||{};
+  const wa = cfg.whatsapp||'';
+  if(!wa){ alert('Configura el WhatsApp en Configuración → Sistema'); return; }
+  const lines = [
+    `*${cfg.businessName||'Mi Negocio'} — Cierre ${c.fecha}*`,
+    `Cajero: ${c.cajero}`,
+    '─────────────────',
+    `Ventas del día: $${Math.round(c.totalVentas).toLocaleString('es-CL')}`,
+    `Ventas efectivo: $${Math.round(c.ventasEfectivo).toLocaleString('es-CL')}`,
+    `Fondo inicial: $${Math.round(c.fondoInicial).toLocaleString('es-CL')}`,
+    `Total esperado: $${Math.round(c.totalEsperado).toLocaleString('es-CL')}`,
+    `Conteo real: $${Math.round(c.conteoReal).toLocaleString('es-CL')}`,
+    `*${c.diferencia>=0?'Sobrante':'Faltante'}: $${Math.round(Math.abs(c.diferencia)).toLocaleString('es-CL')}*`,
+  ];
+  window.open(`https://wa.me/${wa}?text=${encodeURIComponent(lines.join('\n'))}`, '_blank');
+}
+
+function sendBoletaWhatsapp(ventaId){
+  const venta = DB.get('ventas').find(v=>v.id===ventaId);
+  if(!venta) return;
+  const cfg = DB.get('config')||{};
+  const wa = cfg.whatsapp||'';
+  const lines = [
+    `*${cfg.businessName||'Mi Negocio'}*`,
+    `Boleta #${String(ventaId).slice(-6)} · ${venta.fecha}`,
+    '─────────────────',
+    ...venta.items.map(it=>`${it.qty}× ${it.nombre} — $${Math.round(it.subtotal).toLocaleString('es-CL')}`),
+    '─────────────────',
+    `*TOTAL: $${Math.round(venta.total).toLocaleString('es-CL')}*`,
+    `Método: ${venta.metodo||'—'}`,
+    '¡Gracias por su compra!'
+  ];
+  const msg = encodeURIComponent(lines.join('\n'));
+  window.open(`https://wa.me/${wa}?text=${msg}`, '_blank');
 }
 
 // ═══ EXPORTAR EXCEL ═══
@@ -2476,10 +2730,386 @@ function openExportModal(){
   `);
 }
 
+
+
+// ═══ BARCODE SCANNER ═══
+let barcodeMode = false;
+let barcodeBuffer = '';
+let barcodeTimer = null;
+
+function toggleBarcodeMode(){
+  barcodeMode = !barcodeMode;
+  const btn = document.getElementById('barcode-toggle-btn');
+  const ind = document.getElementById('barcode-indicator');
+  const inp = document.getElementById('barcode-input');
+  if(btn) btn.classList.toggle('active', barcodeMode);
+  if(ind) ind.classList.toggle('on', barcodeMode);
+  if(barcodeMode && inp){ inp.focus(); }
+}
+
+function initBarcodeListener(){
+  document.addEventListener('keydown', e=>{
+    if(currentPage !== 'terminal') return;
+    if(!barcodeMode) return;
+    // Barcode scanners send chars rapidly and end with Enter
+    if(e.key === 'Enter'){
+      if(barcodeBuffer.length > 2){
+        processBarcodeInput(barcodeBuffer.trim());
+      }
+      barcodeBuffer = '';
+      clearTimeout(barcodeTimer);
+      e.preventDefault();
+      return;
+    }
+    if(e.key.length === 1){
+      barcodeBuffer += e.key;
+      clearTimeout(barcodeTimer);
+      barcodeTimer = setTimeout(()=>{ barcodeBuffer=''; }, 100);
+    }
+  });
+}
+
+function processBarcodeInput(code){
+  const productos = DB.get('productos');
+  const p = productos.find(x=>x.sku===code || x.codigo===code);
+  if(!p){
+    // Flash message
+    showToast(`Código "${code}" no encontrado`, 'error');
+    return;
+  }
+  if(p.venderPorPeso){
+    openWeightPicker(p.id);
+  } else {
+    addToCart(p.id);
+    showToast(`${p.nombre} agregado`, 'success');
+  }
+}
+
+// ═══ PAGO MIXTO ═══
+function selectMetodo(m){
+  tMetodo = m;
+  document.querySelectorAll('.t-method-btn').forEach(x=>x.classList.remove('active'));
+  event.target.classList.add('active');
+  const mixDiv = document.getElementById('t-mixed-pay');
+  if(mixDiv) mixDiv.style.display = m==='Mixto' ? 'block' : 'none';
+  if(m==='Mixto') calcMixed();
+}
+
+function calcMixed(){
+  const ef = parseInt(document.getElementById('mix-efectivo')?.value)||0;
+  const tr = parseInt(document.getElementById('mix-transf')?.value)||0;
+  const db = parseInt(document.getElementById('mix-debito')?.value)||0;
+  const total = tCart.reduce((s,i)=>s+Math.round(i.precio*i.qty),0);
+  const ingresado = ef+tr+db;
+  const vuelto = ingresado - total;
+  const ingEl = document.getElementById('mix-total-ing');
+  const vueltoRow = document.getElementById('mix-vuelto-row');
+  const vueltoLabel = document.getElementById('mix-vuelto-label');
+  const vueltoVal = document.getElementById('mix-vuelto-val');
+  if(ingEl) ingEl.textContent = fmt(ingresado);
+  if(ingresado > 0 && vueltoRow){
+    vueltoRow.style.display = 'flex';
+    vueltoLabel.textContent = vuelto >= 0 ? 'Vuelto' : 'Falta';
+    vueltoVal.textContent = fmt(Math.abs(vuelto));
+    vueltoVal.style.color = vuelto >= 0 ? 'var(--green)' : 'var(--red)';
+  }
+}
+
+// ═══ TOAST NOTIFICATIONS ═══
+function showToast(msg, type='info'){
+  const existing = document.getElementById('merka-toast');
+  if(existing) existing.remove();
+  const t = document.createElement('div');
+  t.id = 'merka-toast';
+  t.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;
+    font-family:var(--sans);box-shadow:0 4px 20px rgba(0,0,0,0.15);
+    animation:toastIn 0.2s ease;white-space:nowrap;`;
+  const colors = {success:'background:var(--green);color:#fff',error:'background:var(--red);color:#fff',info:'background:var(--sb);color:#fff'};
+  t.style.cssText += colors[type]||colors.info;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2500);
+}
+
+// ═══ AUDITORÍA ═══
+function logAudit(accion, modulo, detalle){
+  if(!session) return;
+  const log = DB.get('auditlog');
+  log.unshift({
+    id: Date.now(),
+    timestamp: new Date().toISOString(),
+    usuario: session.nombre,
+    usuarioId: session.id,
+    accion, modulo, detalle
+  });
+  // Keep only last 500 entries
+  DB.set('auditlog', log.slice(0,500));
+}
+
+// ═══ PERMISOS ═══
+function canDo(permiso){
+  if(!session) return false;
+  if(session.rol==='Administrador') return true;
+  const u = DB.get('usuarios').find(x=>x.id===session.id);
+  if(!u||!u.permisos) return false;
+  return !!u.permisos[permiso];
+}
+
+function checkPerm(permiso, msg){
+  if(!canDo(permiso)){
+    alert(msg || 'No tienes permiso para realizar esta acción.');
+    return false;
+  }
+  return true;
+}
+
+
+// ═══ GASTOS ═══
+function renderGastos(){
+  if(!canDo('verGastos')){ document.getElementById('content').innerHTML='<div class="empty"><div class="empty-icon">🔒</div><div class="empty-title">Sin acceso</div><div class="empty-sub">No tienes permiso para ver gastos.</div></div>'; return; }
+  document.getElementById('topbarActions').innerHTML=`<button class="btn btn-primary btn-sm" onclick="openGastoModal()">+ Gasto</button>`;
+  const gastos = DB.get('gastos');
+  const hoy = today();
+  const mesActual = hoy.slice(0,7);
+  const gastosMes = gastos.filter(g=>g.fecha.startsWith(mesActual));
+  const totalMes = gastosMes.reduce((s,g)=>s+g.monto,0);
+  const totalHoy = gastos.filter(g=>g.fecha===hoy).reduce((s,g)=>s+g.monto,0);
+  document.getElementById('content').innerHTML = `
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">Gastos hoy</div><div class="stat-val red">${fmt(totalHoy)}</div></div>
+      <div class="stat-card"><div class="stat-label">Gastos este mes</div><div class="stat-val red">${fmt(totalMes)}</div><div class="stat-sub">${gastosMes.length} registros</div></div>
+      <div class="stat-card"><div class="stat-label">Total registros</div><div class="stat-val">${gastos.length}</div></div>
+    </div>
+    <div class="section-card">
+      <div class="card-header"><div><div class="card-title">Gastos</div></div></div>
+      <div class="table-wrap"><table>
+        <tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Monto</th><th>Cajero</th><th></th></tr>
+        ${gastos.sort((a,b)=>b.fecha.localeCompare(a.fecha)).map(g=>`<tr>
+          <td class="td-mono" style="font-size:11px">${g.fecha}</td>
+          <td><strong>${g.concepto}</strong>${g.nota?`<br><span style="font-size:11px;color:var(--muted)">${g.nota}</span>`:''}</td>
+          <td><span class="badge badge-red">${g.categoria}</span></td>
+          <td class="td-red">${fmt(g.monto)}</td>
+          <td class="td-muted">${g.cajero||'—'}</td>
+          <td><button class="btn btn-danger btn-sm btn-icon" onclick="deleteGasto(${g.id})">🗑</button></td>
+        </tr>`).join('')||'<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);font-size:12px">Sin gastos registrados</td></tr>'}
+      </table></div>
+    </div>`;
+}
+function openGastoModal(){
+  openModal(`
+    <div class="modal-title">Nuevo Gasto</div>
+    <div class="form-grid">
+      <div class="form-group span2"><label>Concepto</label><input id="g-concepto" placeholder="Arriendo, servicios, insumos..."></div>
+      <div class="form-group"><label>Monto</label><input id="g-monto" type="number" placeholder="50000"></div>
+      <div class="form-group"><label>Fecha</label><input id="g-fecha" type="date" value="${today()}"></div>
+      <div class="form-group"><label>Categoría</label>
+        <select id="g-cat"><option>Arriendo</option><option>Servicios</option><option>Insumos</option><option>Personal</option><option>Transporte</option><option>Publicidad</option><option>Otro</option></select>
+      </div>
+      <div class="form-group"><label>Nota</label><input id="g-nota" placeholder="Observaciones..."></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveGasto()">Guardar</button>
+    </div>`);
+}
+function saveGasto(){
+  const g = {id:Date.now(),concepto:document.getElementById('g-concepto').value.trim(),monto:parseInt(document.getElementById('g-monto').value)||0,fecha:document.getElementById('g-fecha').value,categoria:document.getElementById('g-cat').value,nota:document.getElementById('g-nota').value.trim(),cajero:session?session.nombre:'—'};
+  if(!g.concepto||!g.monto) return alert('Completa concepto y monto');
+  const gastos = DB.get('gastos');
+  gastos.push(g);
+  DB.set('gastos',gastos);
+  logAudit('Gasto registrado','Gastos',`${g.concepto} · ${fmt(g.monto)}`);
+  closeModal(); renderGastos();
+}
+function deleteGasto(id){
+  if(!confirm('¿Eliminar gasto?')) return;
+  const g = DB.get('gastos').find(x=>x.id===id);
+  DB.set('gastos',DB.get('gastos').filter(x=>x.id!==id));
+  logAudit('Gasto eliminado','Gastos',g?.concepto||id);
+  renderGastos();
+}
+
+// ═══ REPORTES ═══
+function renderReportes(){
+  if(!canDo('verReportes')){ document.getElementById('content').innerHTML='<div class="empty"><div class="empty-icon">🔒</div><div class="empty-title">Sin acceso</div><div class="empty-sub">No tienes permiso para ver reportes.</div></div>'; return; }
+  document.getElementById('topbarActions').innerHTML='';
+  window._reportPeriodo = window._reportPeriodo || 'mes';
+  const periodo = window._reportPeriodo;
+  const ventas = DB.get('ventas');
+  const gastos = DB.get('gastos');
+  const productos = DB.get('productos');
+  const hoyStr = today();
+  let ventasFiltradas, gastosFiltrados, labelPeriodo;
+  if(periodo==='hoy'){
+    ventasFiltradas = ventas.filter(v=>v.fecha===hoyStr);
+    gastosFiltrados = gastos.filter(g=>g.fecha===hoyStr);
+    labelPeriodo = 'Hoy';
+  } else if(periodo==='semana'){
+    const d = new Date(); d.setDate(d.getDate()-7);
+    const desde = d.toISOString().split('T')[0];
+    ventasFiltradas = ventas.filter(v=>v.fecha>=desde);
+    gastosFiltrados = gastos.filter(g=>g.fecha>=desde);
+    labelPeriodo = 'Últimos 7 días';
+  } else if(periodo==='mes'){
+    const mesStr = hoyStr.slice(0,7);
+    ventasFiltradas = ventas.filter(v=>v.fecha.startsWith(mesStr));
+    gastosFiltrados = gastos.filter(g=>g.fecha.startsWith(mesStr));
+    labelPeriodo = 'Este mes';
+  } else {
+    const añoStr = hoyStr.slice(0,4);
+    ventasFiltradas = ventas.filter(v=>v.fecha.startsWith(añoStr));
+    gastosFiltrados = gastos.filter(g=>g.fecha.startsWith(añoStr));
+    labelPeriodo = 'Este año';
+  }
+  const totalVentas = ventasFiltradas.reduce((s,v)=>s+v.total,0);
+  const totalGastos = gastosFiltrados.reduce((s,g)=>s+g.monto,0);
+  const costoVentas = ventasFiltradas.reduce((s,v)=>s+v.items.reduce((ss,it)=>{
+    const p=productos.find(x=>x.id===it.productoId);
+    return ss+(p?(p.precioCompra*parseFloat(it.qty||0)):0);
+  },0),0);
+  const gananciasBruta = totalVentas - costoVentas;
+  const gananciaNeta = gananciasBruta - totalGastos;
+  const fechasUnicas = [...new Set(ventasFiltradas.map(v=>v.fecha))].sort();
+
+  const catVentas = {};
+  ventasFiltradas.forEach(v=>v.items.forEach(it=>{
+    const p=productos.find(x=>x.id===it.productoId);
+    const cat=p?.categoria||'Sin categoría';
+    catVentas[cat]=(catVentas[cat]||0)+it.subtotal;
+  }));
+  const topCats = Object.entries(catVentas).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  document.getElementById('content').innerHTML = `
+    <div class="report-tabs">
+      ${['hoy','semana','mes','año'].map(p=>`<div class="report-tab${window._reportPeriodo===p?' active':''}" onclick="window._reportPeriodo='${p}';renderReportes()">${p==='hoy'?'Hoy':p==='semana'?'7 días':p==='mes'?'Este mes':'Este año'}</div>`).join('')}
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-card"><div class="kpi-label">Ventas</div><div class="kpi-val acc">${fmt(totalVentas)}</div><div class="kpi-sub">${ventasFiltradas.length} transacciones</div></div>
+      <div class="kpi-card"><div class="kpi-label">Costo mercadería</div><div class="kpi-val" style="color:var(--muted)">${fmt(costoVentas)}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Ganancia bruta</div><div class="kpi-val green">${fmt(gananciasBruta)}</div><div class="kpi-sub">${totalVentas>0?Math.round(gananciasBruta/totalVentas*100):0}% margen</div></div>
+      <div class="kpi-card"><div class="kpi-label">Gastos</div><div class="kpi-val red">${fmt(totalGastos)}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Ganancia neta</div><div class="kpi-val ${gananciaNeta>=0?'green':'red'}">${fmt(gananciaNeta)}</div><div class="kpi-sub">${labelPeriodo}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px;">
+      <div class="chart-card">
+        <div class="chart-title">Ventas vs Gastos — ${labelPeriodo}</div>
+        <canvas id="chart-main" height="180"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Top categorías</div>
+        ${topCats.length?topCats.map(([cat,val])=>`
+          <div style="margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="font-weight:600">${cat}</span><span style="font-family:var(--mono);color:var(--acc)">${fmt(val)}</span></div>
+            <div class="progress-bar" style="height:6px"><div class="progress-fill acc" style="width:${totalVentas>0?Math.round(val/totalVentas*100):0}%"></div></div>
+          </div>`).join(''):'<div style="color:var(--muted);font-size:12px">Sin datos</div>'}
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Métodos de pago</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;">
+        ${['Efectivo','Transferencia','Débito','Crédito'].map(m=>{
+          const t=ventasFiltradas.filter(v=>v.metodo&&v.metodo.startsWith(m)).reduce((s,v)=>s+v.total,0);
+          const pct=totalVentas>0?Math.round(t/totalVentas*100):0;
+          return t>0?`<div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--radius);padding:14px 18px;min-width:130px;"><div style="font-size:11px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.08em">${m}</div><div style="font-family:var(--mono);font-size:18px;font-weight:700;margin-top:4px">${fmt(t)}</div><div style="font-size:11px;color:var(--muted)">${pct}%</div></div>`:'';
+        }).join('')}
+      </div>
+    </div>
+  `;
+  // Store chart data for deferred rendering
+  window._chartData = {labels: fechasUnicas.map(f=>f.slice(5)), ventas: fechasUnicas.map(f=>ventasFiltradas.filter(v=>v.fecha===f).reduce((s,v)=>s+v.total,0)), gastos: fechasUnicas.map(f=>gastosFiltrados.filter(g=>g.fecha===f).reduce((s,g)=>s+g.monto,0))};
+  setTimeout(()=>{
+    if(typeof Chart !== 'undefined' && window._chartData){
+      const ctx = document.getElementById('chart-main');
+      if(ctx && window._chartData.labels.length > 0){
+        const cd = window._chartData;
+        new Chart(ctx,{type:'bar',data:{labels:cd.labels,datasets:[{label:'Ventas',data:cd.ventas,backgroundColor:'rgba(245,158,11,0.7)',borderColor:'#f59e0b',borderWidth:1,borderRadius:4},{label:'Gastos',data:cd.gastos,backgroundColor:'rgba(220,38,38,0.5)',borderColor:'#dc2626',borderWidth:1,borderRadius:4}]},options:{responsive:true,plugins:{legend:{position:'top'}},scales:{y:{ticks:{callback:function(v){return '$'+Math.round(v).toLocaleString('es-CL')}}}}}});
+      }
+    }
+  }, 100);
+}
+
+// ═══ AUDITORIA UI ═══
+function renderAuditoria(){
+  if(!canDo('gestionarUsuarios')){ document.getElementById('content').innerHTML='<div class="empty"><div class="empty-icon">🔒</div><div class="empty-title">Sin acceso</div></div>'; return; }
+  document.getElementById('topbarActions').innerHTML=`<button class="btn btn-ghost btn-sm" onclick="if(confirm('¿Limpiar historial?')){DB.set('auditlog',[]);renderAuditoria()}">Limpiar</button>`;
+  const log = DB.get('auditlog');
+  document.getElementById('content').innerHTML = `
+    <div class="section-card">
+      <div class="card-header"><div><div class="card-title">Registro de auditoría</div><div class="card-sub">${log.length} entradas</div></div></div>
+      <div style="padding:16px;max-height:600px;overflow-y:auto;">
+        ${log.length ? log.map(e=>`
+          <div class="audit-row">
+            <div class="audit-time">${new Date(e.timestamp).toLocaleString('es-CL')}</div>
+            <div class="audit-user">${e.usuario}</div>
+            <div class="audit-action">${e.accion} · <span style="color:var(--muted)">${e.modulo}</span></div>
+            <div class="audit-detail">${e.detalle||''}</div>
+          </div>
+        `).join('') : '<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">Sin registros de auditoría aún</div>'}
+      </div>
+    </div>`;
+}
+
+// ═══ CONFIGURACIÓN ═══
+function renderConfiguracion(){
+  document.getElementById('topbarActions').innerHTML='';
+  const cfg = DB.get('config')||{};
+  document.getElementById('content').innerHTML = `
+    <div class="config-section">
+      <div class="config-section-title">Datos del negocio (aparecen en boletas)</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Nombre del negocio</label><input id="cfg-name" value="${cfg.businessName||''}" placeholder="Mi Minimarket"></div>
+        <div class="form-group"><label>RUT</label><input id="cfg-rut" value="${cfg.rut||''}" placeholder="12.345.678-9"></div>
+        <div class="form-group span2"><label>Dirección</label><input id="cfg-dir" value="${cfg.direccion||''}" placeholder="Av. Principal 123, Santiago"></div>
+        <div class="form-group"><label>Teléfono</label><input id="cfg-tel" value="${cfg.telefono||''}" placeholder="+56 9 ..."></div>
+        <div class="form-group"><label>Email</label><input id="cfg-email" value="${cfg.email||''}" placeholder="negocio@email.cl"></div>
+        <div class="form-group span2"><label>WhatsApp para envíos (solo números, ej: 56912345678)</label><input id="cfg-wa" value="${cfg.whatsapp||''}" placeholder="56912345678"></div>
+      </div>
+    </div>
+    <div class="config-section">
+      <div class="config-section-title">Logo del negocio</div>
+      <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+        ${cfg.logo?`<img src="${cfg.logo}" class="logo-preview" id="logo-prev">`:`<div id="logo-prev" style="width:120px;height:60px;background:var(--sur2);border:1.5px dashed var(--dim);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted)">Sin logo</div>`}
+        <div>
+          <input type="file" id="logo-file" accept="image/*" style="display:none" onchange="handleLogoUpload(this)">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('logo-file').click()">📷 Subir logo</button>
+          ${cfg.logo?`<button class="btn btn-danger btn-sm" style="margin-left:8px" onclick="const c=DB.get('config')||{};c.logo='';DB.set('config',c);renderConfiguracion()">Quitar</button>`:''}
+          <div style="font-size:11px;color:var(--muted);margin-top:6px">PNG o JPG · máx 200KB</div>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="saveConfigForm()">Guardar configuración</button>
+  `;
+}
+function handleLogoUpload(input){
+  const file = input.files[0];
+  if(!file) return;
+  if(file.size > 200000){ alert('El logo no debe superar 200KB'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const cfg = DB.get('config')||{};
+    cfg.logo = e.target.result;
+    DB.set('config', cfg);
+    renderConfiguracion();
+  };
+  reader.readAsDataURL(file);
+}
+function saveConfigForm(){
+  const cfg = DB.get('config')||{};
+  cfg.businessName = document.getElementById('cfg-name').value.trim();
+  cfg.rut = document.getElementById('cfg-rut').value.trim();
+  cfg.direccion = document.getElementById('cfg-dir').value.trim();
+  cfg.telefono = document.getElementById('cfg-tel').value.trim();
+  cfg.email = document.getElementById('cfg-email').value.trim();
+  cfg.whatsapp = document.getElementById('cfg-wa').value.trim();
+  DB.set('config', cfg);
+  showToast('Configuración guardada ✓', 'success');
+}
+
 // ═══ INIT ═══
 async function init(){
   initSampleData();
   await Promise.all([DB.load('productos'),DB.load('clientes'),DB.load('ventas'),DB.load('cobrar'),DB.load('cierres')]).catch(()=>{});
+  initBarcodeListener();
   if(session && DB.get('usuarios').find(u=>u.id===session.id)){
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('app').classList.remove('hidden');
