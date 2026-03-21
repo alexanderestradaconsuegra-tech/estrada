@@ -834,6 +834,10 @@ const ENDPOINTS = {
   ventas:    N8N + '/merka-ventas',
   cobrar:    N8N + '/merka-cobrar',
   cierres:   N8N + '/merka-cierres',
+  gastos:    N8N + '/merka-gastos',
+  proveedores: N8N + '/merka-proveedores',
+  pagar:     N8N + '/merka-pagar',
+  usuarios:  N8N + '/merka-usuarios',
 };
 
 const API = {
@@ -1126,6 +1130,7 @@ function initSampleData(){
     ]);
   }
   if(!DB.get('auditlog').length) DB.set('auditlog',[]);
+  if(!DB.get('aperturas')) DB.set('aperturas',[]);
   if(!DB.get('config').length || !DB.get('config').businessName){
     DB.set('config',{businessName:'Mi Negocio',rut:'',direccion:'',telefono:'',email:'',logo:'',whatsapp:'',moneda:'CLP'});
   }
@@ -1790,6 +1795,7 @@ function renderClientes(search=''){
               ${c.limiteCredito>0?`<br><span class="credito-badge ${pend>c.limiteCredito?'credito-over':''}">Límite ${fmt(c.limiteCredito)}</span>`:''}
             </td>
             <td style="white-space:nowrap;display:flex;gap:4px;">
+              <button class="btn btn-ghost btn-sm btn-icon" onclick="verDetalle('cliente',${c.id})">👁</button>
               <button class="btn btn-ghost btn-sm btn-icon" onclick='openClienteModal(${JSON.stringify(c)})'>✏️</button>
               <button class="btn btn-danger btn-sm btn-icon" onclick="deleteCliente(${c.id})">🗑</button>
             </td>
@@ -1925,6 +1931,7 @@ function renderCobrar(){
             <td class="${pend>0?'td-acc':'td-green'}">${fmt(pend)}</td>
             <td><span class="badge ${estado}">${estadoTxt}</span></td>
             <td style="white-space:nowrap;display:flex;gap:4px;">
+              <button class="btn btn-ghost btn-sm btn-icon" onclick="verDetalle('cobrar',${c.id})">👁</button>
               ${pend>0?`<button class="btn btn-primary btn-sm btn-icon" onclick='openPagoModal(${JSON.stringify(c)})'>💵</button>`:''}
               <button class="btn btn-ghost btn-sm btn-icon" onclick='openCobrarModal(${JSON.stringify(c)})'>✏️</button>
               <button class="btn btn-danger btn-sm btn-icon" onclick="deleteCobrar(${c.id})">🗑</button>
@@ -2002,17 +2009,20 @@ async function deleteCobrar(id){
 
 // ═══ CIERRE DE CAJA ═══
 function renderCierre(){
-  document.getElementById('topbarActions').innerHTML='';
+  if(!canDo('abrirCaja')){ document.getElementById('content').innerHTML='<div class="empty"><div class="empty-icon">🔒</div><div class="empty-title">Sin acceso</div><div class="empty-sub">No tienes permiso para gestionar caja.</div></div>'; return; }
+  document.getElementById('topbarActions').innerHTML=`<button class="btn btn-ghost btn-sm" onclick="sendCierreWhatsapp()">💬 Enviar por WhatsApp</button>`;
   const hoy = today();
   const ventas = DB.get('ventas');
   const ventasHoy = ventas.filter(v=>v.fecha===hoy);
   const totalHoy = ventasHoy.reduce((s,v)=>s+v.total,0);
-  const efectivo = ventasHoy.filter(v=>v.metodo==='Efectivo').reduce((s,v)=>s+v.total,0);
-  const transf = ventasHoy.filter(v=>v.metodo==='Transferencia').reduce((s,v)=>s+v.total,0);
-  const debito = ventasHoy.filter(v=>v.metodo==='Débito').reduce((s,v)=>s+v.total,0);
-  const credito = ventasHoy.filter(v=>v.metodo==='Crédito').reduce((s,v)=>s+v.total,0);
+  const efectivo = ventasHoy.filter(v=>v.metodo&&v.metodo.includes('Efectivo')).reduce((s,v)=>s+v.total,0);
+  const transf = ventasHoy.filter(v=>v.metodo&&v.metodo.includes('Transferencia')).reduce((s,v)=>s+v.total,0);
+  const debito = ventasHoy.filter(v=>v.metodo&&v.metodo.includes('Débito')).reduce((s,v)=>s+v.total,0);
+  const credito = ventasHoy.filter(v=>v.metodo&&v.metodo.includes('Crédito')).reduce((s,v)=>s+v.total,0);
   const cierres = DB.get('cierres');
-  const cierreHoy = cierres.find(c=>c.fecha===hoy);
+  const turnosHoy = cierres.filter(c=>c.fecha===hoy);
+  const aperturas = DB.get('aperturas')||[];
+  const aperturaActiva = aperturas.find(a=>a.fecha===hoy&&a.activa);
 
   document.getElementById('content').innerHTML = `
     <div class="cierre-grid">
@@ -2027,28 +2037,34 @@ function renderCierre(){
           <span>Total ventas del día</span>
           <span class="cierre-total-val">${fmt(totalHoy)}</span>
         </div>
+        ${turnosHoy.length>0?`
+        <div style="margin-top:14px;">
+          <div class="cierre-block-title">Turnos del día (${turnosHoy.length})</div>
+          ${turnosHoy.map((t,i)=>`
+            <div class="cierre-row">
+              <span class="cierre-row-label">Turno ${i+1} · ${t.cajero}</span>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <span class="cierre-row-val">${fmt(t.totalVentas)}</span>
+                <button class="btn btn-ghost btn-sm btn-icon" onclick="printCierre(${t.id})">🖨</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>`:''}
       </div>
       <div class="cierre-block">
-        <div class="cierre-block-title">Conteo de caja</div>
-        ${cierreHoy ? `
-          <div class="alert alert-success">Caja cerrada el ${cierreHoy.fecha} por ${cierreHoy.cajero}</div>
-          <div style="display:flex;gap:8px;margin-bottom:12px;">
-            <button class="btn btn-ghost btn-sm" onclick="printCierre(${cierreHoy.id})">🖨 Imprimir cierre</button>
-            <button class="btn btn-success btn-sm" onclick="sendCierreWhatsapp()">💬 Enviar por WhatsApp</button>
-          </div>
-          <div class="cierre-row"><span class="cierre-row-label">Fondo inicial</span><span class="cierre-row-val">${fmt(cierreHoy.fondoInicial)}</span></div>
-          <div class="cierre-row"><span class="cierre-row-label">Ventas efectivo</span><span class="cierre-row-val">${fmt(cierreHoy.ventasEfectivo)}</span></div>
-          <div class="cierre-row"><span class="cierre-row-label">Total esperado</span><span class="cierre-row-val">${fmt(cierreHoy.totalEsperado)}</span></div>
-          <div class="cierre-row"><span class="cierre-row-label">Conteo real</span><span class="cierre-row-val">${fmt(cierreHoy.conteoReal)}</span></div>
-          <div class="cierre-diff ${cierreHoy.diferencia>=0?'ok':'bad'}">
-            <span>${cierreHoy.diferencia>=0?'Sobrante':'Faltante'}</span>
-            <span style="font-family:var(--mono);font-size:18px;color:${cierreHoy.diferencia>=0?'var(--green)':'var(--red)'}">${fmt(Math.abs(cierreHoy.diferencia))}</span>
-          </div>
-        ` : `
+        <div class="cierre-block-title">Apertura y cierre de turno</div>
+        ${!aperturaActiva ? `
+          <div class="alert alert-warn" style="margin-bottom:12px">No hay turno abierto. Ingresa el fondo de caja para abrir.</div>
           <div class="form-grid full" style="gap:12px">
-            <div class="form-group"><label>Fondo inicial en caja</label><input type="number" id="cierre-fondo" placeholder="0" oninput="calcCierre()"></div>
-            <div class="form-group"><label>Conteo real de billetes</label><input type="number" id="cierre-conteo" placeholder="0" oninput="calcCierre()"></div>
-            <div class="form-group"><label>Nota</label><input id="cierre-nota" placeholder="Observaciones..."></div>
+            <div class="form-group"><label>Fondo inicial del turno</label><input type="number" id="apertura-fondo" placeholder="Ej: 50000" oninput="calcApertura()"></div>
+            <div class="form-group"><label>Nota de apertura</label><input id="apertura-nota" placeholder="Turno mañana, cajero..."></div>
+          </div>
+          <button class="btn btn-success btn-lg" style="width:100%;margin-top:14px" onclick="abrirTurno()">Abrir turno</button>
+        ` : `
+          <div class="alert alert-success">Turno abierto · Fondo: ${fmt(aperturaActiva.fondo)} · ${aperturaActiva.cajero}</div>
+          <div class="form-grid full" style="gap:12px;margin-top:12px">
+            <div class="form-group"><label>Conteo real de billetes al cerrar</label><input type="number" id="cierre-conteo" placeholder="0" oninput="calcCierre()"></div>
+            <div class="form-group"><label>Nota del cierre</label><input id="cierre-nota" placeholder="Observaciones..."></div>
           </div>
           <div id="cierre-diff-preview" style="margin-top:12px;display:none">
             <div class="cierre-total-row">
@@ -2060,27 +2076,45 @@ function renderCierre(){
               <span id="cierre-diff-val" style="font-family:var(--mono);font-size:18px">$0</span>
             </div>
           </div>
-          <button class="btn btn-primary btn-lg" style="width:100%;margin-top:16px" onclick="cerrarCaja()">Cerrar caja del día</button>
+          <button class="btn btn-primary btn-lg" style="width:100%;margin-top:16px" onclick="cerrarCaja()">Cerrar turno</button>
         `}
       </div>
     </div>
     ${cierres.length ? `
     <div class="section-card">
-      <div class="card-header"><div><div class="card-title">Historial de cierres</div><div class="card-sub">${cierres.length} registros</div></div></div>
+      <div class="card-header">
+        <div><div class="card-title">Historial de cierres</div><div class="card-sub">${cierres.length} registros</div></div>
+      </div>
       <div class="table-wrap"><table>
-        <tr><th>Fecha</th><th>Cajero</th><th>Ventas</th><th>Efectivo</th><th>Esperado</th><th>Real</th><th>Diferencia</th></tr>
+        <tr><th>Fecha</th><th>Cajero</th><th>Fondo</th><th>Ventas</th><th>Efectivo</th><th>Esperado</th><th>Real</th><th>Diferencia</th><th></th></tr>
         ${[...cierres].reverse().map(c=>`<tr>
           <td class="td-mono" style="font-size:11px">${c.fecha}</td>
           <td style="font-size:12px">${c.cajero}</td>
+          <td class="td-muted">${fmt(c.fondoInicial)}</td>
           <td class="td-acc">${fmt(c.totalVentas)}</td>
           <td class="td-green">${fmt(c.ventasEfectivo)}</td>
           <td class="td-mono">${fmt(c.totalEsperado)}</td>
           <td class="td-mono">${fmt(c.conteoReal)}</td>
           <td class="${c.diferencia>=0?'td-green':'td-red'}">${c.diferencia>=0?'+':''}${fmt(c.diferencia)}</td>
+          <td><button class="btn btn-ghost btn-sm btn-icon" onclick="printCierre(${c.id})">🖨</button></td>
         </tr>`).join('')}
       </table></div>
     </div>` : ''}
   `;
+}
+function abrirTurno(){
+  if(!checkPerm('abrirCaja')) return;
+  const fondo = parseInt(document.getElementById('apertura-fondo')?.value)||0;
+  const nota = document.getElementById('apertura-nota')?.value.trim()||'';
+  const apertura = {id:Date.now(),fecha:today(),cajero:session?session.nombre:'—',fondo,nota,activa:true,timestamp:new Date().toISOString()};
+  const aperturas = DB.get('aperturas')||[];
+  aperturas.push(apertura);
+  DB.set('aperturas',aperturas);
+  logAudit('Turno abierto','Caja',`Fondo: ${fmt(fondo)} · ${session?.nombre}`);
+  renderCierre();
+}
+function calcApertura(){
+  // Just visual feedback - nothing needed
 }
 function calcCierre(){
   const hoy = today();
@@ -2103,21 +2137,32 @@ function calcCierre(){
   }
 }
 function cerrarCaja(){
+  if(!checkPerm('abrirCaja')) return;
   const hoy = today();
+  const aperturas = DB.get('aperturas')||[];
+  const aperturaActiva = aperturas.find(a=>a.fecha===hoy&&a.activa);
+  const fondo = aperturaActiva ? aperturaActiva.fondo : 0;
   const ventasHoy = DB.get('ventas').filter(v=>v.fecha===hoy);
-  const totalVentas = ventasHoy.reduce((s,v)=>s+v.total,0);
-  const ventasEfectivo = ventasHoy.filter(v=>v.metodo==='Efectivo').reduce((s,v)=>s+v.total,0);
-  const fondo = parseInt(document.getElementById('cierre-fondo')?.value)||0;
+  // Solo contar ventas desde la apertura del turno
+  const ventasTurno = aperturaActiva ? ventasHoy.filter(v=>v.id >= aperturaActiva.id) : ventasHoy;
+  const totalVentas = ventasTurno.reduce((s,v)=>s+v.total,0);
+  const ventasEfectivo = ventasTurno.filter(v=>v.metodo&&v.metodo.includes('Efectivo')).reduce((s,v)=>s+v.total,0);
   const conteo = parseInt(document.getElementById('cierre-conteo')?.value)||0;
   const nota = document.getElementById('cierre-nota')?.value.trim()||'';
   if(conteo===0&&!confirm('El conteo está en $0. ¿Confirmar cierre?')) return;
   const totalEsperado = fondo + ventasEfectivo;
   const diferencia = conteo - totalEsperado;
-  const cierre = {id:Date.now(),fecha:hoy,cajero:session?session.nombre:'—',totalVentas,ventasEfectivo,fondoInicial:fondo,totalEsperado,conteoReal:conteo,diferencia,nota,timestamp:new Date().toISOString()};
+  const cierre = {id:Date.now(),fecha:hoy,cajero:session?session.nombre:'—',totalVentas,ventasEfectivo,fondoInicial:fondo,totalEsperado,conteoReal:conteo,diferencia,nota,timestamp:new Date().toISOString(),turno:(DB.get('cierres').filter(c=>c.fecha===hoy).length+1)};
+  // Cerrar apertura activa
+  if(aperturaActiva){
+    const nuevasAperturas = aperturas.map(a=>a.id===aperturaActiva.id?{...a,activa:false,cierreId:cierre.id}:a);
+    DB.set('aperturas',nuevasAperturas);
+  }
   const cierres = DB.get('cierres');
   cierres.push(cierre);
   DB.set('cierres',cierres);
   DB.sync('cierres', cierre);
+  logAudit('Turno cerrado','Caja',`${fmt(totalVentas)} ventas · Diferencia: ${fmt(diferencia)}`);
   renderCierre();
 }
 
@@ -2204,12 +2249,17 @@ function saveUsuario(id,isEdit){
   if(isEdit) usuarios = usuarios.map(x=>x.id===id?u:x);
   else usuarios.push(u);
   DB.set('usuarios',usuarios);
+  DB.sync('usuarios', u);
+  logAudit(isEdit?'Usuario editado':'Usuario creado','Usuarios',u.nombre);
   closeModal(); renderUsuarios();
 }
 function deleteUsuario(id){
   if(session&&session.id===id){ alert('No puedes eliminar el usuario activo.'); return; }
   if(!confirm('¿Eliminar usuario?')) return;
+  const du=DB.get('usuarios').find(u=>u.id===id);
   DB.set('usuarios',DB.get('usuarios').filter(u=>u.id!==id));
+  DB.remove('usuarios',id);
+  logAudit('Usuario eliminado','Usuarios',du?.nombre||id);
   renderUsuarios();
 }
 
@@ -2317,6 +2367,7 @@ function renderProveedores(search=''){
             <td style="font-size:12px">${p.ciudad||'—'}</td>
             <td class="${pend>0?'td-red':'td-green'}">${fmt(pend)}</td>
             <td style="white-space:nowrap;display:flex;gap:4px;">
+              <button class="btn btn-ghost btn-sm btn-icon" onclick="verDetalle('proveedor',${p.id})">👁</button>
               <button class="btn btn-ghost btn-sm btn-icon" onclick='openProveedorModal(${JSON.stringify(p)})'>✏️</button>
               <button class="btn btn-danger btn-sm btn-icon" onclick="deleteProveedor(${p.id})">🗑</button>
             </td>
@@ -2919,6 +2970,7 @@ function saveGasto(){
   const gastos = DB.get('gastos');
   gastos.push(g);
   DB.set('gastos',gastos);
+  DB.sync('gastos', g);
   logAudit('Gasto registrado','Gastos',`${g.concepto} · ${fmt(g.monto)}`);
   closeModal(); renderGastos();
 }
@@ -2926,6 +2978,7 @@ function deleteGasto(id){
   if(!confirm('¿Eliminar gasto?')) return;
   const g = DB.get('gastos').find(x=>x.id===id);
   DB.set('gastos',DB.get('gastos').filter(x=>x.id!==id));
+  DB.remove('gastos', id);
   logAudit('Gasto eliminado','Gastos',g?.concepto||id);
   renderGastos();
 }
@@ -3103,6 +3156,103 @@ function saveConfigForm(){
   cfg.whatsapp = document.getElementById('cfg-wa').value.trim();
   DB.set('config', cfg);
   showToast('Configuración guardada ✓', 'success');
+}
+
+
+// ═══ VER DETALLE / PDF ═══
+function verDetalle(tipo, id){
+  const cfg = DB.get('config')||{};
+  const biz = cfg.businessName||'Mi Negocio';
+  let titulo = '', html = '';
+
+  if(tipo==='venta'){
+    const v = DB.get('ventas').find(x=>x.id===id);
+    if(!v) return;
+    titulo = `Venta #${String(id).slice(-6)}`;
+    html = `
+      <div class="center"><div class="title">${biz}</div>${cfg.rut?`<div class="small">RUT: ${cfg.rut}</div>`:''}${cfg.direccion?`<div class="small">${cfg.direccion}</div>`:''}${cfg.telefono?`<div class="small">Tel: ${cfg.telefono}</div>`:''}</div>
+      <div class="divider"></div>
+      <div class="row"><span>Venta #</span><span>${String(id).slice(-6)}</span></div>
+      <div class="row"><span>Fecha:</span><span>${v.fecha}</span></div>
+      <div class="row"><span>Cajero:</span><span>${v.cajero||'—'}</span></div>
+      ${v.cliente?`<div class="row"><span>Cliente:</span><span>${v.cliente}</span></div>`:''}
+      <div class="row"><span>Método:</span><span>${v.metodo||'—'}</span></div>
+      <div class="divider"></div>
+      <div style="font-weight:bold;margin-bottom:8px">DETALLE</div>
+      ${v.items.map(it=>`<div class="row"><span>${it.nombre}</span></div><div class="row"><span class="small">${it.qty} × $${Math.round(it.precio).toLocaleString('es-CL')}</span><span>$${Math.round(it.subtotal).toLocaleString('es-CL')}</span></div>`).join('')}
+      <div class="divider"></div>
+      <div class="total"><span>TOTAL</span><span>$${Math.round(v.total).toLocaleString('es-CL')}</span></div>`;
+  }
+  else if(tipo==='cliente'){
+    const c = DB.get('clientes').find(x=>x.id===id);
+    if(!c) return;
+    titulo = `Cliente: ${c.nombre}`;
+    const deuda = DB.get('cobrar').filter(x=>x.clienteId===c.id).reduce((s,x)=>s+(x.monto-x.pagado),0);
+    const ventas = DB.get('ventas').filter(v=>v.cliente===c.nombre);
+    const totalVentas = ventas.reduce((s,v)=>s+v.total,0);
+    html = `
+      <div class="center"><div class="title">${c.nombre}</div>${c.empresa?`<div class="small">${c.empresa}</div>`:''}</div>
+      <div class="divider"></div>
+      ${c.rut?`<div class="row"><span>RUT:</span><span>${c.rut}</span></div>`:''}
+      ${c.telefono?`<div class="row"><span>Teléfono:</span><span>${c.telefono}</span></div>`:''}
+      ${c.email?`<div class="row"><span>Email:</span><span>${c.email}</span></div>`:''}
+      ${c.direccion?`<div class="row"><span>Dirección:</span><span>${c.direccion}</span></div>`:''}
+      ${c.ciudad?`<div class="row"><span>Ciudad:</span><span>${c.ciudad}</span></div>`:''}
+      ${c.limiteCredito?`<div class="row"><span>Límite crédito:</span><span>$${c.limiteCredito.toLocaleString('es-CL')}</span></div>`:''}
+      <div class="divider"></div>
+      <div class="total"><span>Total compras</span><span>$${Math.round(totalVentas).toLocaleString('es-CL')}</span></div>
+      <div class="total"><span>Deuda pendiente</span><span>$${Math.round(deuda).toLocaleString('es-CL')}</span></div>
+      ${c.nota?`<div class="divider"></div><div class="small">${c.nota}</div>`:''}`;
+  }
+  else if(tipo==='proveedor'){
+    const p = DB.get('proveedores').find(x=>x.id===id);
+    if(!p) return;
+    titulo = `Proveedor: ${p.nombre}`;
+    const deuda = DB.get('pagar').filter(x=>x.proveedorId===p.id).reduce((s,x)=>s+(x.monto-x.pagado),0);
+    html = `
+      <div class="center"><div class="title">${p.nombre}</div></div>
+      <div class="divider"></div>
+      ${p.rut?`<div class="row"><span>RUT:</span><span>${p.rut}</span></div>`:''}
+      ${p.contacto?`<div class="row"><span>Contacto:</span><span>${p.contacto}</span></div>`:''}
+      ${p.telefono?`<div class="row"><span>Teléfono:</span><span>${p.telefono}</span></div>`:''}
+      ${p.email?`<div class="row"><span>Email:</span><span>${p.email}</span></div>`:''}
+      ${p.direccion?`<div class="row"><span>Dirección:</span><span>${p.direccion}</span></div>`:''}
+      <div class="divider"></div>
+      <div class="total"><span>Por pagar</span><span>$${Math.round(deuda).toLocaleString('es-CL')}</span></div>
+      ${p.nota?`<div class="divider"></div><div class="small">${p.nota}</div>`:''}`;
+  }
+  else if(tipo==='cobrar'){
+    const c = DB.get('cobrar').find(x=>x.id===id);
+    if(!c) return;
+    const cl = DB.get('clientes').find(x=>x.id===c.clienteId)||{nombre:'—'};
+    titulo = `Cuenta por cobrar #${String(id).slice(-4)}`;
+    html = `
+      <div class="center"><div class="title">${biz}</div></div>
+      <div class="divider"></div>
+      <div class="row"><span>Cliente:</span><span>${cl.nombre}</span></div>
+      ${cl.rut?`<div class="row"><span>RUT:</span><span>${cl.rut}</span></div>`:''}
+      <div class="row"><span>Concepto:</span><span>${c.concepto}</span></div>
+      <div class="row"><span>Fecha:</span><span>${c.fecha}</span></div>
+      <div class="row"><span>Vencimiento:</span><span>${c.vencimiento}</span></div>
+      <div class="divider"></div>
+      <div class="row"><span>Total:</span><span>$${Math.round(c.monto).toLocaleString('es-CL')}</span></div>
+      <div class="row"><span>Pagado:</span><span>$${Math.round(c.pagado).toLocaleString('es-CL')}</span></div>
+      <div class="total"><span>PENDIENTE</span><span>$${Math.round(c.monto-c.pagado).toLocaleString('es-CL')}</span></div>
+      ${c.pagos&&c.pagos.length?`<div class="divider"></div><div style="font-weight:bold;margin-bottom:6px">Historial de pagos</div>${c.pagos.map(p=>`<div class="row"><span class="small">${p.fecha}${p.nota?' · '+p.nota:''}</span><span>$${Math.round(p.monto).toLocaleString('es-CL')}</span></div>`).join('')}`:''}`;
+  }
+
+  const win = window.open('','_blank','width=420,height=600');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${titulo}</title>
+  <style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Courier New',monospace;font-size:13px;color:#000;padding:20px;max-width:320px;margin:0 auto;}
+  .center{text-align:center;margin-bottom:8px;}.title{font-size:16px;font-weight:bold;margin-bottom:4px;}.divider{border-top:1px dashed #000;margin:10px 0;}
+  .row{display:flex;justify-content:space-between;padding:3px 0;flex-wrap:wrap;gap:4px;}.total{display:flex;justify-content:space-between;padding:6px 0;font-size:15px;font-weight:bold;}
+  .small{font-size:11px;color:#555;}
+  .btn-print{display:block;margin:16px auto 0;padding:10px 24px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;}
+  @media print{.btn-print{display:none;}}</style></head><body>
+  ${html}
+  <button class="btn-print" onclick="window.print()">🖨 Imprimir / PDF</button>
+  </body></html>`);
+  win.document.close();
 }
 
 // ═══ INIT ═══
