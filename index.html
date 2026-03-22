@@ -1131,6 +1131,7 @@ function initSampleData(){
   }
   if(!DB.get('auditlog').length) DB.set('auditlog',[]);
   if(!DB.get('aperturas')) DB.set('aperturas',[]);
+  if(!DB.get('recepciones')) DB.set('recepciones',[]);
   if(!DB.get('config').length || !DB.get('config').businessName){
     DB.set('config',{businessName:'Mi Negocio',rut:'',direccion:'',telefono:'',email:'',logo:'',whatsapp:'',moneda:'CLP'});
   }
@@ -1562,8 +1563,14 @@ function renderDashboard(){
   const totalPendiente = cobrar.reduce((s,c)=>s+(c.monto-c.pagado),0);
   const stockBajo = productos.filter(p=>p.stock<10).length;
   const totalInventario = productos.reduce((s,p)=>s+p.precioVenta*p.stock,0);
-  const ventasEfectivo = ventasHoy.filter(v=>v.metodo==='Efectivo').reduce((s,v)=>s+v.total,0);
-  const ventasTransf = ventasHoy.filter(v=>v.metodo==='Transferencia').reduce((s,v)=>s+v.total,0);
+  const ventasEfectivo = ventasHoy.filter(v=>v.metodo&&v.metodo.includes('Efectivo')).reduce((s,v)=>s+v.total,0);
+  const ventasTransf = ventasHoy.filter(v=>v.metodo&&v.metodo.includes('Transferencia')).reduce((s,v)=>s+v.total,0);
+  const gastos = DB.get('gastos');
+  const gastosHoy = gastos.filter(g=>g.fecha===hoy);
+  const totalGastosHoy = gastosHoy.reduce((s,g)=>s+g.monto,0);
+  const gastosEfectivo = gastosHoy.filter(g=>!g.metodo||g.metodo==='Efectivo').reduce((s,g)=>s+g.monto,0);
+  const costoVentasHoy = ventasHoy.reduce((s,v)=>s+v.items.reduce((ss,it)=>{const p=productos.find(x=>x.id===it.productoId);return ss+(p?p.precioCompra*parseFloat(it.qty||0):0);},0),0);
+  const gananciaNeta = totalVentasHoy - costoVentasHoy - totalGastosHoy;
 
   document.getElementById('content').innerHTML = `
     <div class="stats-row">
@@ -1586,6 +1593,16 @@ function renderDashboard(){
         <div class="stat-label">Inventario</div>
         <div class="stat-val">${fmt(totalInventario)}</div>
         <div class="stat-sub">${productos.length} productos</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Gastos hoy</div>
+        <div class="stat-val red">${fmt(totalGastosHoy)}</div>
+        <div class="stat-sub">${gastosHoy.length} registros</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Ganancia neta</div>
+        <div class="stat-val ${gananciaNeta>=0?'green':'red'}">${fmt(gananciaNeta)}</div>
+        <div class="stat-sub">ventas - costos - gastos</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Stock bajo</div>
@@ -1651,7 +1668,7 @@ function renderDashboard(){
 
 // ═══ INVENTARIO ═══
 function renderInventario(search=''){
-  document.getElementById('topbarActions').innerHTML=`<button class="btn btn-primary btn-sm" onclick="openProductoModal()">+ Producto</button>`;
+  document.getElementById('topbarActions').innerHTML=`<button class="btn btn-ghost btn-sm" onclick="openRecepcionModal()">📦 Recepción mercadería</button><button class="btn btn-primary btn-sm" onclick="openProductoModal()">+ Producto</button>`;
   let productos = DB.get('productos');
   if(search) productos = productos.filter(p=>p.nombre.toLowerCase().includes(search.toLowerCase())||p.sku.toLowerCase().includes(search.toLowerCase()));
   document.getElementById('content').innerHTML = `
@@ -1904,6 +1921,27 @@ function renderCobrar(){
   const totalDeuda = cobrar.reduce((s,c)=>s+c.monto,0);
   const totalPagado = cobrar.reduce((s,c)=>s+c.pagado,0);
   const totalPendiente = totalDeuda-totalPagado;
+  const recepciones_con_factura = recepciones.length ? `
+    <div class="section-card" style="margin-top:16px;">
+      <div class="card-header"><div><div class="card-title">Historial de recepciones</div><div class="card-sub">${recepciones.length} facturas recibidas</div></div></div>
+      <div class="table-wrap"><table>
+        <tr><th>Fecha</th><th>Factura</th><th>Proveedor</th><th>Monto</th><th>Vence</th><th>Estado</th></tr>
+        ${[...recepciones].reverse().map(r=>{
+          const pv=proveedores.find(x=>x.id===r.proveedorId)||{nombre:'—'};
+          const cuentaPagar=pagar.find(p=>p.facturaRef===r.factura);
+          const pagada=cuentaPagar&&cuentaPagar.pagado>=cuentaPagar.monto;
+          return `<tr>
+            <td class="td-mono" style="font-size:11px">${r.fecha}</td>
+            <td class="td-mono">${r.factura||'—'}</td>
+            <td>${pv.nombre}</td>
+            <td class="td-acc">${fmt(r.monto)}</td>
+            <td class="td-mono" style="font-size:11px">${r.vencimiento||'—'}</td>
+            <td><span class="badge ${pagada?'badge-green':r.vencimiento&&new Date(r.vencimiento)<new Date()?'badge-red':'badge-yellow'}">${pagada?'Pagada':r.vencimiento&&new Date(r.vencimiento)<new Date()?'Vencida':'Pendiente'}</span></td>
+          </tr>`;
+        }).join('')}
+      </table></div>
+    </div>` : '';
+
   document.getElementById('content').innerHTML = `
     <div class="cobrar-summary">
       <div class="cobrar-box"><div class="cobrar-box-label">Total facturado</div><div class="cobrar-box-val">${fmt(totalDeuda)}</div></div>
@@ -2118,10 +2156,13 @@ function calcApertura(){
 }
 function calcCierre(){
   const hoy = today();
-  const ef = DB.get('ventas').filter(v=>v.fecha===hoy&&v.metodo==='Efectivo').reduce((s,v)=>s+v.total,0);
-  const fondo = parseInt(document.getElementById('cierre-fondo')?.value)||0;
+  const aperturas = DB.get('aperturas')||[];
+  const aperturaActiva = aperturas.find(a=>a.fecha===hoy&&a.activa);
+  const fondo = aperturaActiva ? aperturaActiva.fondo : 0;
+  const ef = DB.get('ventas').filter(v=>v.fecha===hoy&&v.metodo&&v.metodo.includes('Efectivo')).reduce((s,v)=>s+v.total,0);
+  const gastosEf = DB.get('gastos').filter(g=>g.fecha===hoy&&(!g.metodo||g.metodo==='Efectivo')).reduce((s,g)=>s+g.monto,0);
   const conteo = parseInt(document.getElementById('cierre-conteo')?.value)||0;
-  const esperado = fondo + ef;
+  const esperado = fondo + ef - gastosEf;
   const diff = conteo - esperado;
   const preview = document.getElementById('cierre-diff-preview');
   if(preview && (fondo||conteo)){
@@ -2147,12 +2188,13 @@ function cerrarCaja(){
   const ventasTurno = aperturaActiva ? ventasHoy.filter(v=>v.id >= aperturaActiva.id) : ventasHoy;
   const totalVentas = ventasTurno.reduce((s,v)=>s+v.total,0);
   const ventasEfectivo = ventasTurno.filter(v=>v.metodo&&v.metodo.includes('Efectivo')).reduce((s,v)=>s+v.total,0);
+  const gastosEfTurno = DB.get('gastos').filter(g=>g.fecha===hoy&&(!g.metodo||g.metodo==='Efectivo')).reduce((s,g)=>s+g.monto,0);
   const conteo = parseInt(document.getElementById('cierre-conteo')?.value)||0;
   const nota = document.getElementById('cierre-nota')?.value.trim()||'';
   if(conteo===0&&!confirm('El conteo está en $0. ¿Confirmar cierre?')) return;
-  const totalEsperado = fondo + ventasEfectivo;
+  const totalEsperado = fondo + ventasEfectivo - gastosEfTurno;
   const diferencia = conteo - totalEsperado;
-  const cierre = {id:Date.now(),fecha:hoy,cajero:session?session.nombre:'—',totalVentas,ventasEfectivo,fondoInicial:fondo,totalEsperado,conteoReal:conteo,diferencia,nota,timestamp:new Date().toISOString(),turno:(DB.get('cierres').filter(c=>c.fecha===hoy).length+1)};
+  const cierre = {id:Date.now(),fecha:hoy,cajero:session?session.nombre:'—',totalVentas,ventasEfectivo,fondoInicial:fondo,gastosEfectivo:gastosEfTurno,totalEsperado,conteoReal:conteo,diferencia,nota,timestamp:new Date().toISOString(),turno:(DB.get('cierres').filter(c=>c.fecha===hoy).length+1)};
   // Cerrar apertura activa
   if(aperturaActiva){
     const nuevasAperturas = aperturas.map(a=>a.id===aperturaActiva.id?{...a,activa:false,cierreId:cierre.id}:a);
@@ -2415,6 +2457,8 @@ function renderPagar(){
   document.getElementById('topbarActions').innerHTML=`<button class="btn btn-primary btn-sm" onclick="openPagarModal()">+ Cuenta</button>`;
   const pagar = DB.get('pagar');
   const proveedores = DB.get('proveedores');
+  const recepciones = DB.get('recepciones')||[];
+  const recepcionesPendientes = recepciones.filter(r=>r.vencimiento&&r.monto>0&&!pagar.find(p=>p.facturaRef===r.factura&&p.pagado>=p.monto));
   const totalDeuda = pagar.reduce((s,c)=>s+c.monto,0);
   const totalPagado = pagar.reduce((s,c)=>s+c.pagado,0);
   const totalPendiente = totalDeuda-totalPagado;
@@ -2935,11 +2979,12 @@ function renderGastos(){
     <div class="section-card">
       <div class="card-header"><div><div class="card-title">Gastos</div></div></div>
       <div class="table-wrap"><table>
-        <tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Monto</th><th>Cajero</th><th></th></tr>
+        <tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Método</th><th>Monto</th><th>Cajero</th><th></th></tr>
         ${gastos.sort((a,b)=>b.fecha.localeCompare(a.fecha)).map(g=>`<tr>
           <td class="td-mono" style="font-size:11px">${g.fecha}</td>
           <td><strong>${g.concepto}</strong>${g.nota?`<br><span style="font-size:11px;color:var(--muted)">${g.nota}</span>`:''}</td>
           <td><span class="badge badge-red">${g.categoria}</span></td>
+          <td><span class="badge badge-muted">${g.metodo||'Efectivo'}</span></td>
           <td class="td-red">${fmt(g.monto)}</td>
           <td class="td-muted">${g.cajero||'—'}</td>
           <td><button class="btn btn-danger btn-sm btn-icon" onclick="deleteGasto(${g.id})">🗑</button></td>
@@ -2957,6 +3002,9 @@ function openGastoModal(){
       <div class="form-group"><label>Categoría</label>
         <select id="g-cat"><option>Arriendo</option><option>Servicios</option><option>Insumos</option><option>Personal</option><option>Transporte</option><option>Publicidad</option><option>Otro</option></select>
       </div>
+      <div class="form-group"><label>Método de pago</label>
+        <select id="g-metodo"><option>Efectivo</option><option>Transferencia</option><option>Débito</option><option>Crédito</option></select>
+      </div>
       <div class="form-group"><label>Nota</label><input id="g-nota" placeholder="Observaciones..."></div>
     </div>
     <div class="form-actions">
@@ -2965,7 +3013,7 @@ function openGastoModal(){
     </div>`);
 }
 function saveGasto(){
-  const g = {id:Date.now(),concepto:document.getElementById('g-concepto').value.trim(),monto:parseInt(document.getElementById('g-monto').value)||0,fecha:document.getElementById('g-fecha').value,categoria:document.getElementById('g-cat').value,nota:document.getElementById('g-nota').value.trim(),cajero:session?session.nombre:'—'};
+  const g = {id:Date.now(),concepto:document.getElementById('g-concepto').value.trim(),monto:parseInt(document.getElementById('g-monto').value)||0,fecha:document.getElementById('g-fecha').value,categoria:document.getElementById('g-cat').value,metodo:document.getElementById('g-metodo').value,nota:document.getElementById('g-nota').value.trim(),cajero:session?session.nombre:'—'};
   if(!g.concepto||!g.monto) return alert('Completa concepto y monto');
   const gastos = DB.get('gastos');
   gastos.push(g);
@@ -3158,6 +3206,134 @@ function saveConfigForm(){
   showToast('Configuración guardada ✓', 'success');
 }
 
+
+
+// ═══ RECEPCIÓN DE MERCADERÍA ═══
+function openRecepcionModal(){
+  const proveedores = DB.get('proveedores');
+  const productos = DB.get('productos');
+  openModal(`
+    <div class="modal-title">📦 Recepción de Mercadería</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Proveedor</label>
+        <select id="rec-prov">
+          <option value="">— Sin proveedor —</option>
+          ${proveedores.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group"><label>N° Factura</label><input id="rec-factura" placeholder="FAC-001234"></div>
+      <div class="form-group"><label>Fecha factura</label><input id="rec-fecha" type="date" value="${today()}"></div>
+      <div class="form-group"><label>Monto total factura</label><input id="rec-monto" type="number" placeholder="0" oninput="calcRecepcionTotal()"></div>
+      <div class="form-group"><label>Vencimiento pago</label><input id="rec-vence" type="date"></div>
+      <div class="form-group span2"><label>Nota</label><input id="rec-nota" placeholder="Observaciones de la entrega..."></div>
+    </div>
+    <div style="margin:16px 0 8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;font-family:var(--mono);">Productos recibidos</div>
+    <div id="rec-items"></div>
+    <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="addRecepcionItem()">+ Agregar producto</button>
+    <div style="margin-top:12px;padding:12px 14px;background:var(--acc-dim);border:1px solid var(--acc-bdr);border-radius:var(--radius);display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:11px;color:var(--muted);font-family:var(--mono);text-transform:uppercase">Total calculado</span>
+      <span id="rec-total-calc" style="font-family:var(--mono);font-weight:700;font-size:16px;color:var(--acc)">$0</span>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveRecepcion()">Registrar recepción</button>
+    </div>
+  `);
+  addRecepcionItem();
+}
+
+function addRecepcionItem(){
+  const productos = DB.get('productos');
+  const div = document.createElement('div');
+  div.style.cssText='display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--bdr);flex-wrap:wrap;';
+  div.innerHTML=`
+    <select class="rec-prod" style="flex:2;min-width:150px" onchange="calcRecepcionTotal()">
+      <option value="">Selecciona producto...</option>
+      ${productos.map(p=>`<option value="${p.id}" data-costo="${p.precioCompra}" data-nombre="${p.nombre}">${p.nombre}</option>`).join('')}
+    </select>
+    <input class="rec-qty" type="number" min="0.001" step="0.001" value="1" style="width:70px" placeholder="Cant." oninput="calcRecepcionTotal()">
+    <input class="rec-costo" type="number" style="width:90px" placeholder="Costo unit." oninput="calcRecepcionTotal()">
+    <span class="rec-sub" style="font-family:var(--mono);font-size:12px;color:var(--acc);min-width:70px;text-align:right">$0</span>
+    <span style="cursor:pointer;color:var(--red);padding:4px" onclick="this.parentElement.remove();calcRecepcionTotal()">✕</span>`;
+  div.querySelector('.rec-prod').addEventListener('change', function(){
+    const opt = this.options[this.selectedIndex];
+    const costo = opt?.dataset?.costo;
+    if(costo) div.querySelector('.rec-costo').value = costo;
+    calcRecepcionTotal();
+  });
+  document.getElementById('rec-items').appendChild(div);
+}
+
+function calcRecepcionTotal(){
+  let total = 0;
+  document.querySelectorAll('#rec-items > div').forEach(row=>{
+    const qty = parseFloat(row.querySelector('.rec-qty')?.value)||0;
+    const costo = parseFloat(row.querySelector('.rec-costo')?.value)||0;
+    const sub = qty*costo;
+    total += sub;
+    const subEl = row.querySelector('.rec-sub');
+    if(subEl) subEl.textContent = fmt(sub);
+  });
+  const el = document.getElementById('rec-total-calc');
+  if(el) el.textContent = fmt(total);
+}
+
+function saveRecepcion(){
+  const provId = document.getElementById('rec-prov')?.value;
+  const factura = document.getElementById('rec-factura')?.value.trim();
+  const fecha = document.getElementById('rec-fecha')?.value;
+  const monto = parseInt(document.getElementById('rec-monto')?.value)||0;
+  const vence = document.getElementById('rec-vence')?.value;
+  const nota = document.getElementById('rec-nota')?.value.trim();
+
+  if(!factura) return alert('Ingresa el número de factura');
+
+  const items = [];
+  document.querySelectorAll('#rec-items > div').forEach(row=>{
+    const sel = row.querySelector('.rec-prod');
+    const qty = parseFloat(row.querySelector('.rec-qty')?.value)||0;
+    const costo = parseFloat(row.querySelector('.rec-costo')?.value)||0;
+    const opt = sel?.options[sel.selectedIndex];
+    if(opt?.value && qty > 0){
+      items.push({productoId:parseInt(opt.value),nombre:opt.dataset.nombre,qty,costo,subtotal:qty*costo});
+    }
+  });
+
+  if(!items.length) return alert('Agrega al menos un producto');
+
+  // Update stock and purchase price
+  let productos = DB.get('productos');
+  items.forEach(it=>{
+    productos = productos.map(p=>{
+      if(p.id!==it.productoId) return p;
+      const newStock = parseFloat(p.stock||0) + it.qty;
+      const newCosto = it.costo > 0 ? it.costo : p.precioCompra;
+      return {...p, stock: Math.round(newStock*1000)/1000, precioCompra: newCosto};
+    });
+    DB.sync('productos', productos.find(p=>p.id===it.productoId));
+  });
+  DB.set('productos', productos);
+
+  // Save reception record
+  const recepcion = {id:Date.now(),proveedorId:provId?parseInt(provId):null,factura,fecha,monto:monto||items.reduce((s,i)=>s+i.subtotal,0),vencimiento:vence,nota,items,cajero:session?session.nombre:'—'};
+  const recepciones = DB.get('recepciones')||[];
+  recepciones.push(recepcion);
+  DB.set('recepciones', recepciones);
+
+  // If proveedor and vence, create cuenta por pagar automatically
+  if(provId && vence && monto > 0){
+    const pagar = DB.get('pagar');
+    const cuentaPagar = {id:Date.now()+1,proveedorId:parseInt(provId),concepto:`Factura ${factura}`,monto:monto||items.reduce((s,i)=>s+i.subtotal,0),pagado:0,fecha,vencimiento:vence,pagos:[],facturaRef:factura};
+    pagar.push(cuentaPagar);
+    DB.set('pagar', pagar);
+    DB.sync('pagar', cuentaPagar);
+  }
+
+  logAudit('Recepción mercadería','Inventario',`Factura ${factura} · ${items.length} productos · ${fmt(recepcion.monto)}`);
+  closeModal();
+  renderInventario();
+  showToast(`Recepción registrada · ${items.length} productos actualizados`, 'success');
+}
 
 // ═══ VER DETALLE / PDF ═══
 function verDetalle(tipo, id){
