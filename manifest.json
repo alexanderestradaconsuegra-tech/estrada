@@ -1,0 +1,45 @@
+{
+  "name": "Merka POS",
+  "short_name": "Merka",
+  "description": "Sistema de gestión comercial para minimarkets y negocios",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0c1a2e",
+  "theme_color": "#0c1a2e",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Terminal de Ventas"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Terminal de Ventas",
+      "short_name": "Terminal",
+      "description": "Ir al terminal de ventas",
+      "url": "/?page=terminal",
+      "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "prefer_related_applications": false
+}
