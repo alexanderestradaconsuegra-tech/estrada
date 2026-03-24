@@ -1001,29 +1001,37 @@ select option{background:var(--sur);}
 <script>
 // ═══ CONFIG ═══
 const N8N = 'https://n8n-n8n.fa2cjf.easypanel.host/webhook';
+
+// ═══ ORG_ID — Identificador único de este negocio ═══
+// Cambiar este valor por un ID único para cada cliente
+// Ejemplo: 'negocio-juan-2026' o 'minimarket-santiago-001'
+const ORG_ID = localStorage.getItem('merka_org_id') || 'default';
+
 const ENDPOINTS = {
-  productos: N8N + '/merka-productos',
-  clientes:  N8N + '/merka-clientes',
-  ventas:    N8N + '/merka-ventas',
-  cobrar:    N8N + '/merka-cobrar',
-  cierres:   N8N + '/merka-cierres',
-  gastos:    N8N + '/merka-gastos',
-  proveedores: N8N + '/merka-proveedores',
-  pagar:     N8N + '/merka-pagar',
-  usuarios:  N8N + '/merka-usuarios',
+  productos:     N8N + '/merka-productos',
+  clientes:      N8N + '/merka-clientes',
+  ventas:        N8N + '/merka-ventas',
+  cobrar:        N8N + '/merka-cobrar',
+  cierres:       N8N + '/merka-cierres',
+  gastos:        N8N + '/merka-gastos',
+  proveedores:   N8N + '/merka-proveedores',
+  pagar:         N8N + '/merka-pagar',
+  usuarios:      N8N + '/merka-usuarios',
+  configuracion: N8N + '/merka-configuracion',
 };
 
 const API = {
   async call(endpoint, body) {
     try {
+      // Siempre incluir org_id en todas las llamadas
+      const payload = { ...body, org_id: ORG_ID };
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify(body)
+        body: JSON.stringify(payload)
       });
       if(!res.ok) throw new Error('HTTP '+res.status);
       const json = await res.json();
-      // n8n puede devolver array directo o {data:[...]}
       if(Array.isArray(json)) return json;
       if(Array.isArray(json.data)) return json.data;
       if(json.data) return json.data;
@@ -1038,6 +1046,8 @@ const API = {
   delete:  (m, id)   => API.call(ENDPOINTS[m],    {action:'delete', id}),
   pago:    (cuentaId, monto, fecha, nota) =>
     API.call(ENDPOINTS.cobrar, {action:'pago', cuentaId, monto, fecha, nota}),
+  pagoProveedor: (cuentaId, monto, fecha, nota) =>
+    API.call(ENDPOINTS.pagar, {action:'pago', cuentaId, monto, fecha, nota}),
 };
 
 const CACHE = {};
@@ -1046,6 +1056,19 @@ const DB = {
   set: (k,v) => { CACHE[k]=v; localStorage.setItem('merka_'+k, JSON.stringify(v)); },
   // Carga desde n8n, fallback a localStorage
   async load(k) {
+    // configuracion tiene estructura especial
+    if(k === 'config'){
+      try {
+        const res = await API.call(ENDPOINTS.configuracion, {action:'getAll'});
+        if(res && res.datos){
+          const cfg = typeof res.datos === 'string' ? JSON.parse(res.datos) : res.datos;
+          CACHE['config'] = cfg;
+          localStorage.setItem('merka_config', JSON.stringify(cfg));
+          return cfg;
+        }
+      } catch(e){ console.warn('Config load error:', e); }
+      return DB.get('config');
+    }
     const data = await API.getAll(k);
     if(data && Array.isArray(data) && data.length >= 0){
       // Normalizar snake_case → camelCase para productos y cobrar
@@ -1194,6 +1217,7 @@ function doLogin(){
   updateSessionUI();
   showPage('terminal');
   startPolling();
+  checkOrgSetup();
 }
 function openSwitchOverlay(){
   renderLoginCashiers('switchCashierList','selectSwitchUser');
@@ -2599,6 +2623,13 @@ function saveUsuario(id,isEdit){
   DB.sync('usuarios', u);
   logAudit(isEdit?'Usuario editado':'Usuario creado','Usuarios',u.nombre);
   closeModal(); renderUsuarios();
+  // Update session if editing self
+  if(isEdit && session && session.id === u.id){
+    session.nombre = u.nombre;
+    session.rol = u.rol;
+    localStorage.setItem('merka_session', JSON.stringify(session));
+    updateSessionUI();
+  }
 }
 function deleteUsuario(id){
   if(session&&session.id===id){ alert('No puedes eliminar el usuario activo.'); return; }
@@ -3844,6 +3875,8 @@ function handleLogoUpload(input){
     const cfg = DB.get('config')||{};
     cfg.logo = e.target.result;
     DB.set('config', cfg);
+    API.call(ENDPOINTS.configuracion, {action:'save', data: cfg}).catch(e=>console.warn('Logo save error:',e));
+    updateLogoElements();
     renderConfiguracion();
   };
   reader.readAsDataURL(file);
@@ -3857,6 +3890,8 @@ function saveConfigForm(){
   cfg.email = document.getElementById('cfg-email').value.trim();
   cfg.whatsapp = document.getElementById('cfg-wa').value.trim();
   DB.set('config', cfg);
+  // Persistir en PostgreSQL
+  API.call(ENDPOINTS.configuracion, {action:'save', data: cfg}).catch(e=>console.warn('Config save error:',e));
   updateLogoElements();
   showToast('Configuración guardada ✓', 'success');
   const msg = document.getElementById('cfg-saved-msg');
@@ -4174,11 +4209,66 @@ function startPolling(){
 window.addEventListener('online', ()=>{ setSyncState('ok'); syncAll(false); });
 window.addEventListener('offline', ()=> setSyncState('offline'));
 
+
+// ═══ ORG_ID SETUP ═══
+function checkOrgSetup(){
+  const orgId = localStorage.getItem('merka_org_id');
+  if(!orgId || orgId === 'default'){
+    // Show setup if admin and no org_id configured
+    if(session && session.rol === 'Administrador'){
+      showOrgSetupBanner();
+    }
+  }
+}
+
+function showOrgSetupBanner(){
+  const existing = document.getElementById('org-setup-banner');
+  if(existing) return;
+  const banner = document.createElement('div');
+  banner.id = 'org-setup-banner';
+  banner.style.cssText = `position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+    background:var(--sur);border:1.5px solid var(--acc);border-radius:14px;
+    padding:16px 20px;z-index:500;box-shadow:0 8px 32px rgba(0,0,0,0.3);
+    max-width:420px;width:calc(100% - 40px);`;
+  banner.innerHTML = `
+    <div style="font-size:13px;font-weight:700;margin-bottom:6px;color:var(--acc)">⚙ Configurar ID del negocio</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Para separar tus datos de otros negocios, define un ID único (sin espacios).</div>
+    <div style="display:flex;gap:8px;">
+      <input id="org-id-input" placeholder="ej: minimarket-juan-2026"
+        style="flex:1;padding:8px 12px;border:1.5px solid var(--bdr);border-radius:8px;
+        background:var(--sur2);color:var(--text);font-size:13px;font-family:var(--mono);outline:none;">
+      <button onclick="setOrgId()" class="btn btn-primary btn-sm">Guardar</button>
+      <button onclick="document.getElementById('org-setup-banner').remove()" class="btn btn-ghost btn-sm">✕</button>
+    </div>`;
+  document.body.appendChild(banner);
+  const inp = document.getElementById('org-id-input');
+  if(inp) inp.focus();
+}
+
+function setOrgId(){
+  const val = document.getElementById('org-id-input')?.value.trim().replace(/[^a-z0-9\-_]/gi,'');
+  if(!val || val.length < 3){ showToast('ID debe tener al menos 3 caracteres', 'error'); return; }
+  localStorage.setItem('merka_org_id', val);
+  document.getElementById('org-setup-banner')?.remove();
+  showToast(`✓ ID configurado: ${val}. Recarga para aplicar.`, 'success');
+  setTimeout(()=>location.reload(), 2000);
+}
+
 // ═══ INIT ═══
 async function init(){
   initSampleData();
   // Load from n8n first, fallback to localStorage
-  await Promise.all([DB.load('productos'),DB.load('clientes'),DB.load('ventas'),DB.load('cobrar'),DB.load('cierres'),DB.load('gastos'),DB.load('proveedores'),DB.load('pagar')]).catch(()=>{});
+  // Load config and usuarios first (needed before login screen)
+  await Promise.all([
+    DB.load('config'),
+    DB.load('usuarios'),
+  ]).catch(()=>{});
+  // Load data modules
+  await Promise.all([
+    DB.load('productos'),DB.load('clientes'),DB.load('ventas'),
+    DB.load('cobrar'),DB.load('cierres'),DB.load('gastos'),
+    DB.load('proveedores'),DB.load('pagar')
+  ]).catch(()=>{});
   initBarcodeListener();
   updateLogoElements();
   if(session && DB.get('usuarios').find(u=>u.id===session.id)){
