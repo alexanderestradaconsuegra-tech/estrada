@@ -3784,19 +3784,26 @@ async function authLogin(){
   if(btn){ btn.textContent='Verificando...'; btn.disabled=true; }
   if(errEl) errEl.textContent='';
 
-  // ── DEMO MODE: admin / 1234 ──
+  // ── DEMO MODE: admin / 1234 — entra directo ──
   if(orgId === 'admin' && pass === '1234'){
     localStorage.setItem('merka_org_id', 'demo-mode');
     localStorage.setItem('merka_demo_mode', 'true');
     localStorage.setItem('merka_demo_ventas', '0');
-    // Set demo users
-    DB.set('usuarios',[
-      {id:1,nombre:'Administrador Demo',rol:'Administrador',pin:'1234',activo:true,
-       permisos:{verCostos:true,editarInventario:false,eliminarVentas:false,verReportes:true,verGastos:false,gestionarUsuarios:false,abrirCaja:true}}
-    ]);
+    const demoAdmin = {id:1,nombre:'Administrador Demo',rol:'Administrador',pin:'',activo:true,
+      permisos:{verCostos:true,editarInventario:false,eliminarVentas:false,verReportes:true,verGastos:false,gestionarUsuarios:false,abrirCaja:true}};
+    DB.set('usuarios',[demoAdmin]);
     DB.set('config',{businessName:'Demo — Merka POS',rut:'',direccion:'',telefono:'',logo:'',whatsapp:''});
+    // Auto-login as demo admin — skip user selection
+    session = {id:demoAdmin.id, nombre:demoAdmin.nombre, rol:demoAdmin.rol};
+    localStorage.setItem('merka_session', JSON.stringify(session));
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').classList.remove('hidden');
+    updateSessionUI();
+    updateLogoElements();
+    showPage('terminal');
+    startPolling();
+    setTimeout(showDemoBanner, 500);
     if(btn){ btn.textContent='Acceder →'; btn.disabled=false; }
-    showDemoLayer2();
     return;
   }
 
