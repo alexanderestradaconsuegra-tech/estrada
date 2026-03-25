@@ -1010,6 +1010,26 @@ select option{background:var(--sur);}
     </button>
   </aside>
 
+  <!-- MOBILE BOTTOM NAV -->
+  <div class="mobile-bottom-nav" id="mobile-bottom-nav" style="display:none">
+    <button class="mobile-nav-item active" id="mnav-ventas" onclick="mobileNav('ventas')">
+      <span class="m-nav-ic">📋</span>
+      <span>Ventas</span>
+    </button>
+    <button class="mobile-nav-item" id="mnav-reportes" onclick="mobileNav('reportes')">
+      <span class="m-nav-ic">📊</span>
+      <span>Reportes</span>
+    </button>
+    <button class="mobile-nav-item" id="mnav-cierre" onclick="mobileNav('cierre')">
+      <span class="m-nav-ic">⬫</span>
+      <span>Caja</span>
+    </button>
+    <button class="mobile-nav-item" id="mnav-clientes" onclick="mobileNav('clientes')">
+      <span class="m-nav-ic">👥</span>
+      <span>Clientes</span>
+    </button>
+  </div>
+
   <!-- DEMO BANNER -->
   <div id="demo-banner" style="display:none;align-items:center;justify-content:center;
     padding:8px 20px;background:rgba(14,165,233,0.08);border-bottom:1px solid rgba(14,165,233,0.15);
@@ -1252,6 +1272,7 @@ function showPage(page){
   if(navEl) navEl.classList.add('active');
   const titles = {terminal:'Terminal de Ventas',dashboard:'Panel de control',calendario:'Calendario',inventario:'Inventario',ventas:'Ventas del Día',clientes:'Clientes',proveedores:'Proveedores',pagar:'Cuentas por Pagar',gastos:'Gastos',cierre:'Cierre de Caja',reportes:'Reportes',auditoria:'Auditoría',configuracion:'Configuración',usuarios:'Usuarios'};
   document.getElementById('pageTitle').textContent = titles[page]||page;
+  updateMobileNav(page);
   document.getElementById('topbarDate').textContent = todayLabel();
   const pages = {terminal:renderTerminal,dashboard:renderDashboard,calendario:renderCalendario,inventario:renderInventario,ventas:renderVentas,clientes:renderClientes,proveedores:renderProveedores,pagar:renderPagar,gastos:renderGastos,cierre:renderCierre,reportes:renderReportes,auditoria:renderAuditoria,configuracion:renderConfiguracion,usuarios:renderUsuarios};
   const isTerminal = page==='terminal';
@@ -1306,6 +1327,7 @@ function doLogin(){
   showPage('terminal');
   if(isDemoMode()){ setTimeout(showDemoBanner, 500); } else { setTimeout(checkDemo, 1000); }
   startPolling();
+  setTimeout(initMobileNav, 100);
 }
 function openSwitchOverlay(){
   renderLoginCashiers('switchCashierList','selectSwitchUser');
@@ -1452,6 +1474,19 @@ let tMetodo = 'Efectivo';
 let tCliente = '';
 
 function renderTerminal(){
+  if(isMobile()){
+    document.getElementById('content').innerHTML = `
+      <div class="empty" style="padding:60px 24px;text-align:center;">
+        <div style="font-size:56px;margin-bottom:16px">🖥️</div>
+        <div class="empty-title" style="font-size:18px;margin-bottom:8px">Terminal solo disponible en PC</div>
+        <div class="empty-sub" style="font-size:14px;color:var(--muted);line-height:1.6;max-width:280px;margin:0 auto">
+          Para vender usa una computadora o tablet en modo horizontal.
+          En tu celular puedes ver Ventas, Reportes y Caja.
+        </div>
+        <button class="btn btn-primary" style="margin-top:24px" onclick="mobileNav('ventas')">Ver ventas del día →</button>
+      </div>`;
+    return;
+  }
   document.getElementById('topbarActions').innerHTML = `
     <span style="font-size:11px;color:var(--muted);font-family:var(--mono);" id="t-sale-count">${DB.get('ventas').filter(v=>v.fecha===today()).length} ventas hoy</span>
   `;
@@ -3497,6 +3532,38 @@ function quitarDescuento(cartId){
   closeModal();
   renderCart();
 }
+
+
+// ═══ MOBILE NAV ═══
+function isMobile(){ return window.innerWidth <= 768; }
+
+function initMobileNav(){
+  const nav = document.getElementById('mobile-bottom-nav');
+  if(nav) nav.style.display = isMobile() ? 'flex' : 'none';
+  if(isMobile() && currentPage === 'terminal'){
+    // Redirect terminal to ventas on mobile
+    showPage('ventas');
+  }
+}
+
+function mobileNav(page){
+  // Update active state
+  document.querySelectorAll('.mobile-nav-item').forEach(el=>{
+    el.classList.remove('active');
+  });
+  const activeBtn = document.getElementById('mnav-'+page);
+  if(activeBtn) activeBtn.classList.add('active');
+  showPage(page);
+}
+
+function updateMobileNav(page){
+  if(!isMobile()) return;
+  document.querySelectorAll('.mobile-nav-item').forEach(el=>el.classList.remove('active'));
+  const btn = document.getElementById('mnav-'+page);
+  if(btn) btn.classList.add('active');
+}
+
+window.addEventListener('resize', initMobileNav);
 
 // ═══ MOBILE CART ═══
 function isMobile(){ return window.innerWidth <= 768; }
