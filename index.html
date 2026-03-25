@@ -852,6 +852,29 @@ select option{background:var(--sur);}
 .t-success-total{font-family:var(--mono);font-size:28px;font-weight:800;color:var(--green);letter-spacing:-1px;}
 .t-success-label{font-size:13px;color:var(--muted);}
 .t-success-method{font-size:12px;font-family:var(--mono);color:var(--muted);}
+
+/* ═══ MOBILE OVERRIDE — SOLO REPORTES ═══ */
+@media(max-width:768px){
+  .sidebar,.overlay-sidebar,.mobile-bottom-nav,.menu-btn,.topbar-actions,.cart-fab{display:none!important;}
+  .main{margin-left:0!important;}
+  .content{padding:14px!important;padding-bottom:20px!important;}
+  .kpi-row{grid-template-columns:1fr 1fr!important;gap:8px;}
+  .kpi-card{padding:12px 10px!important;}
+  .kpi-val{font-size:17px!important;letter-spacing:-1px;}
+  .kpi-label{font-size:9px!important;}
+  .report-tabs{gap:4px;margin-bottom:12px;flex-wrap:wrap;}
+  .report-tab{padding:5px 10px!important;font-size:11px!important;}
+  .chart-card{padding:12px!important;}
+  .stats-row{grid-template-columns:1fr 1fr!important;gap:8px;}
+  .stat-card{padding:10px 12px!important;}
+  .stat-val{font-size:16px!important;}
+  .section-card{border-radius:10px;}
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table{font-size:11px;}
+  th,td{padding:6px 8px;}
+  .td-desktop-only{display:none!important;}
+}
+
 </style>
 </head>
 <body>
