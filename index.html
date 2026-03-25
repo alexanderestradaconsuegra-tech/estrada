@@ -495,6 +495,34 @@ select option{background:var(--sur);}
 ::-webkit-scrollbar{width:5px;height:5px;}
 @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 
+
+
+/* ── MOBILE REPORTES ── */
+@media(max-width:768px){
+  .kpi-row{grid-template-columns:1fr 1fr;gap:8px;}
+  .kpi-card{padding:12px;}
+  .kpi-val{font-size:18px;}
+  .chart-card{padding:14px;}
+  .report-tabs{gap:4px;}
+  .report-tab{padding:6px 12px;font-size:11px;}
+  /* Ventas del día mobile */
+  .stat-card{padding:12px 14px;}
+  .stat-val{font-size:18px;}
+  /* Tables on mobile */
+  table{font-size:11px;}
+  th,td{padding:6px 8px;}
+  /* Hide less important columns on mobile */
+  .td-desktop-only{display:none!important;}
+  /* Date picker row wrap */
+  #ventas-fecha-picker{font-size:12px;padding:6px 8px;}
+}
+
+/* ── MOBILE NAV — solo módulos esenciales ── */
+@media(max-width:768px){
+  .nav-item[data-desktop-only]{display:none!important;}
+  .nav-section[data-desktop-only]{display:none!important;}
+}
+
 /* ── SYNC INDICATOR ── */
 .sync-btn{
   display:flex;align-items:center;gap:5px;
@@ -564,15 +592,7 @@ select option{background:var(--sur);}
   padding:1px 6px;font-size:9px;font-weight:700;font-family:var(--mono);
 }
 
-/* ── BARCODE ── */
-.barcode-btn{
-  display:flex;align-items:center;gap:6px;padding:8px 12px;
-  background:var(--sur2);border:1.5px solid var(--bdr);border-radius:var(--radius-sm);
-  cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);transition:all 0.15s;
-}
-.barcode-btn:hover,.barcode-btn.active{border-color:var(--acc);color:var(--acc);background:var(--acc-dim);}
-.barcode-indicator{width:8px;height:8px;border-radius:50%;background:var(--dim);}
-.barcode-indicator.on{background:var(--green);box-shadow:0 0 6px var(--green);}
+/* ── BARCODE — always-on, no UI needed ── */
 
 /* ── GASTOS ── */
 .gasto-badge{background:var(--red-dim);color:var(--red);border:1px solid rgba(220,38,38,0.2);}
@@ -837,6 +857,7 @@ select option{background:var(--sur);}
 <body>
 
 <!-- LOGIN SCREEN -->
+<!-- CAPA 1: ID del negocio + contraseña -->
 <div class="login-screen" id="loginScreen">
   <div class="login-card">
     <div class="login-logo">
@@ -846,15 +867,40 @@ select option{background:var(--sur);}
         <div class="tagline">Sistema de gestión comercial</div>
       </div>
     </div>
-    <div class="login-h">¿Quién atiende ahora?</div>
-    <div class="login-sub">Selecciona tu perfil para iniciar el turno.</div>
-    <div class="cashier-list" id="loginCashierList"></div>
-    <div class="login-pin-wrap" id="pinWrap" style="display:none">
-      <label>PIN de acceso</label>
-      <input type="password" id="pinInput" placeholder="••••" maxlength="6" oninput="checkPin()">
-      <div class="login-error" id="pinError"></div>
+    <!-- CAPA 1: Acceso al negocio -->
+    <div id="login-layer1">
+      <div class="login-h">Bienvenido</div>
+      <div class="login-sub" style="margin-bottom:20px">Ingresa tu ID y contraseña para acceder.</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+        <div>
+          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono)">ID del negocio</label>
+          <input id="auth-orgid" placeholder="tu-id-de-negocio" autocomplete="username"
+            style="width:100%;margin-top:6px;padding:11px 14px;border:1.5px solid var(--bdr);border-radius:var(--radius-sm);background:var(--sur2);color:var(--text);font-size:14px;font-family:var(--mono);outline:none"
+            onkeydown="if(event.key==='Enter')document.getElementById('auth-pass').focus()">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono)">Contraseña</label>
+          <input id="auth-pass" type="password" placeholder="••••••••" autocomplete="current-password"
+            style="width:100%;margin-top:6px;padding:11px 14px;border:1.5px solid var(--bdr);border-radius:var(--radius-sm);background:var(--sur2);color:var(--text);font-size:14px;outline:none"
+            onkeydown="if(event.key==='Enter')authLogin()">
+        </div>
+      </div>
+      <div class="login-error" id="auth-error" style="margin-bottom:10px"></div>
+      <button class="btn btn-primary btn-lg" style="width:100%" onclick="authLogin()" id="auth-btn">Acceder →</button>
     </div>
-    <button class="btn btn-primary btn-lg" style="width:100%" onclick="doLogin()" id="loginBtn" disabled>Entrar al sistema</button>
+    <!-- CAPA 2: Selección de usuario -->
+    <div id="login-layer2" style="display:none">
+      <div class="login-h">¿Quién atiende ahora?</div>
+      <div class="login-sub">Selecciona tu perfil para iniciar el turno.</div>
+      <div class="cashier-list" id="loginCashierList"></div>
+      <div class="login-pin-wrap" id="pinWrap" style="display:none">
+        <label>PIN de acceso</label>
+        <input type="password" id="pinInput" placeholder="••••" maxlength="6" oninput="checkPin()">
+        <div class="login-error" id="pinError"></div>
+      </div>
+      <button class="btn btn-primary btn-lg" style="width:100%" onclick="doLogin()" id="loginBtn" disabled>Entrar al sistema</button>
+      <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:8px" onclick="backToLayer1()">← Cambiar negocio</button>
+    </div>
   </div>
 </div>
 
@@ -924,23 +970,23 @@ select option{background:var(--sur);}
         <span class="nav-ic">⬡</span>Terminal de Ventas
       </div>
       <div class="nav-section">Reportes</div>
-      <div class="nav-item" onclick="showPage('dashboard')"><span class="nav-ic">◈</span>Dashboard</div>
+      <div class="nav-item" onclick="showPage('dashboard')"><span class="nav-ic">◈</span>Panel de control</div>
       <div class="nav-item" onclick="showPage('calendario')"><span class="nav-ic">▦</span>Calendario</div>
       <div class="nav-item" onclick="showPage('ventas')"><span class="nav-ic">⊕</span>Ventas del Día</div>
-      <div class="nav-section">Gestión</div>
-      <div class="nav-item" onclick="showPage('inventario')"><span class="nav-ic">▦</span>Inventario</div>
+      <div class="nav-section" data-desktop-only="1">Gestión</div>
+      <div class="nav-item" data-desktop-only="1" onclick="showPage('inventario')"><span class="nav-ic">▦</span>Inventario</div>
       <div class="nav-item" onclick="showPage('clientes')"><span class="nav-ic">◷</span>Clientes</div>
       <div class="nav-item" onclick="showPage('proveedores')"><span class="nav-ic">◈</span>Proveedores</div>
-      <div class="nav-item" onclick="showPage('pagar')" id="nav-pagar"><span class="nav-ic">◎</span>Por Pagar (Proveedores)</div>
+      <div class="nav-item" data-desktop-only="1" onclick="showPage('pagar')" id="nav-pagar"><span class="nav-ic">◎</span>Por Pagar (Proveedores)</div>
       <div class="nav-section">Operaciones</div>
-      <div class="nav-item" onclick="showPage('gastos')" id="nav-gastos"><span class="nav-ic">💸</span>Gastos</div>
+      <div class="nav-item" data-desktop-only="1" onclick="showPage('gastos')" id="nav-gastos"><span class="nav-ic">💸</span>Gastos</div>
       <div class="nav-item" onclick="showPage('cierre')"><span class="nav-ic">⬫</span>Cierre de Caja</div>
       <div class="nav-section">Análisis</div>
       <div class="nav-item" onclick="showPage('reportes')"><span class="nav-ic">◈</span>Reportes</div>
-      <div class="nav-section">Sistema</div>
-      <div class="nav-item" onclick="showPage('auditoria')" id="nav-auditoria"><span class="nav-ic">◷</span>Auditoría</div>
-      <div class="nav-item" onclick="showPage('configuracion')"><span class="nav-ic">⊞</span>Configuración</div>
-      <div class="nav-item" onclick="showPage('usuarios')" id="nav-usuarios"><span class="nav-ic">⊞</span>Usuarios</div>
+      <div class="nav-section" data-desktop-only="1">Sistema</div>
+      <div class="nav-item" data-desktop-only="1" onclick="showPage('auditoria')" id="nav-auditoria"><span class="nav-ic">◷</span>Auditoría</div>
+      <div class="nav-item" data-desktop-only="1" onclick="showPage('configuracion')"><span class="nav-ic">⊞</span>Configuración</div>
+      <div class="nav-item" data-desktop-only="1" onclick="showPage('usuarios')" id="nav-usuarios"><span class="nav-ic">⊞</span>Usuarios</div>
     </nav>
     <div style="padding:8px 12px;border-top:1px solid var(--sb-bdr);">
       <button class="sync-btn" onclick="manualSync()" id="sync-btn" style="width:100%;justify-content:center;gap:8px;">
@@ -1059,6 +1105,7 @@ const ENDPOINTS = {
   pagar:         N8N + '/merka-pagar',
   usuarios:      N8N + '/merka-usuarios',
   configuracion: N8N + '/merka-configuracion',
+  auth:          N8N + '/merka-auth',
 };
 
 const API = {
@@ -1203,7 +1250,7 @@ function showPage(page){
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
   const navEl = document.querySelector(`[onclick="showPage('${page}')"]`);
   if(navEl) navEl.classList.add('active');
-  const titles = {terminal:'Terminal de Ventas',dashboard:'Dashboard',calendario:'Calendario',inventario:'Inventario',ventas:'Ventas del Día',clientes:'Clientes',proveedores:'Proveedores',pagar:'Cuentas por Pagar',gastos:'Gastos',cierre:'Cierre de Caja',reportes:'Reportes',auditoria:'Auditoría',configuracion:'Configuración',usuarios:'Usuarios'};
+  const titles = {terminal:'Terminal de Ventas',dashboard:'Panel de control',calendario:'Calendario',inventario:'Inventario',ventas:'Ventas del Día',clientes:'Clientes',proveedores:'Proveedores',pagar:'Cuentas por Pagar',gastos:'Gastos',cierre:'Cierre de Caja',reportes:'Reportes',auditoria:'Auditoría',configuracion:'Configuración',usuarios:'Usuarios'};
   document.getElementById('pageTitle').textContent = titles[page]||page;
   document.getElementById('topbarDate').textContent = todayLabel();
   const pages = {terminal:renderTerminal,dashboard:renderDashboard,calendario:renderCalendario,inventario:renderInventario,ventas:renderVentas,clientes:renderClientes,proveedores:renderProveedores,pagar:renderPagar,gastos:renderGastos,cierre:renderCierre,reportes:renderReportes,auditoria:renderAuditoria,configuracion:renderConfiguracion,usuarios:renderUsuarios};
@@ -1257,9 +1304,8 @@ function doLogin(){
   document.getElementById('app').classList.remove('hidden');
   updateSessionUI();
   showPage('terminal');
+  if(isDemoMode()){ setTimeout(showDemoBanner, 500); } else { setTimeout(checkDemo, 1000); }
   startPolling();
-  checkOrgSetup();
-  setTimeout(checkDemo, 1000);
 }
 function openSwitchOverlay(){
   renderLoginCashiers('switchCashierList','selectSwitchUser');
@@ -1443,13 +1489,8 @@ function renderTerminal(){
           <div class="terminal-header-title">Carrito</div>
           <div style="display:flex;align-items:center;gap:8px;">
             <div class="terminal-header-count" id="t-cart-count">0 items</div>
-            <div class="barcode-btn" id="barcode-toggle-btn" onclick="toggleBarcodeMode()" title="Lector de código de barras">
-              <div class="barcode-indicator" id="barcode-indicator"></div>
-              <span>Barcode</span>
-            </div>
           </div>
         </div>
-        <input id="barcode-input" style="position:absolute;opacity:0;width:1px;height:1px;top:0;left:0" tabindex="-1">
         <div class="terminal-cart" id="t-cart-list">
           <div class="t-cart-empty">
             <div class="t-cart-empty-icon">🛒</div>
@@ -1503,7 +1544,7 @@ function renderTerminal(){
           </button>
           <button class="t-cobrar-btn" id="t-credito-btn" onclick="cobrarCredito()" disabled
             style="background:rgba(101,163,13,0.12);color:var(--green);border:1.5px solid rgba(101,163,13,0.25);margin-top:6px;font-size:13px;">
-            💳 Vender a crédito
+            📋 Vender a crédito
           </button>
           <button class="t-clear-btn" onclick="clearCart()">Limpiar carrito</button>
         </div>
@@ -1734,6 +1775,7 @@ function renderCart(){
 
 function cobrarVenta(){
   if(!tCart.length) return;
+  if(!checkDemoVentaLimit()) return;
   const total = tCart.reduce((s,i)=>s+Math.round(i.precio*i.qty),0);
   // Validate mixed payment
   if(tMetodo==='Mixto'){
@@ -1800,6 +1842,8 @@ function cobrarVenta(){
   DB.set('ventas', ventas);
   DB.sync('ventas', venta);
   logAudit('Venta registrada', 'Terminal', `${fmt(venta.total)} · ${venta.metodo} · ${venta.items.length} productos`);
+  incrementDemoVentas();
+  if(isDemoMode()) showDemoBanner();
   // Sync stock actualizado de cada producto afectado
   items.forEach(i=>{
     const p = DB.get('productos').find(x=>x.id===i.productoId);
@@ -1940,9 +1984,9 @@ function renderDashboard(){
           <tr>
             <td class="td-mono td-muted">${String(i+1).padStart(2,'0')}</td>
             <td>${v.cliente||'<span style="color:var(--muted)">—</span>'}</td>
-            <td style="font-size:11.5px;line-height:1.8;">${v.items.map(it=>`${it.qty}× ${it.nombre}`).join('<br>')}</td>
+            <td class="td-desktop-only" style="font-size:11.5px;line-height:1.8;">${v.items.map(it=>`${it.qty}× ${it.nombre}`).join('<br>')}</td>
             <td><span class="badge badge-muted">${v.metodo||'—'}</span></td>
-            <td class="td-muted">${v.cajero||'—'}</td>
+            <td class="td-muted td-desktop-only">${v.cajero||'—'}</td>
             <td class="td-acc">${fmt(v.total)}</td>
           </tr>
         `).join('')||'<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);font-size:12px">Sin ventas hoy</td></tr>'}
@@ -2044,6 +2088,7 @@ function addVolRow(){
   document.getElementById('vol-list').appendChild(div);
 }
 function saveProducto(id, isEdit){
+  if(isDemoMode()){ showToast('Inventario bloqueado en modo demo','error'); return; }
   if(!checkPerm('editarInventario','No tienes permiso para modificar el inventario.')) return;
   const vols = [...document.querySelectorAll('#vol-list .vol-row')].map(r=>({
     desde:parseInt(r.querySelector('.vol-desde').value)||0,
@@ -2262,7 +2307,7 @@ function renderVentas(filtroFecha){
           <div class="card-sub">${ventasDia.length} ventas · <span style="color:var(--acc);font-family:var(--mono)">${fmt(totalDia)}</span></div></div>
         </div>
         <div class="table-wrap"><table>
-          <tr><th>#</th><th>Cliente</th><th>Detalle</th><th>Método</th><th>Cajero</th><th>Total</th><th></th></tr>
+          <tr><th>#</th><th>Cliente</th><th class="td-desktop-only">Detalle</th><th>Método</th><th class="td-desktop-only">Cajero</th><th>Total</th><th></th></tr>
           ${ventasDia.map((v,i)=>`<tr>
             <td class="td-mono td-muted">${String(i+1).padStart(2,'0')}</td>
             <td>${v.cliente||'<span style="color:var(--muted)">—</span>'}</td>
@@ -3461,6 +3506,7 @@ function initMobileCart(){
   if(fab) fab.style.display = isMobile() ? 'flex' : 'none';
 }
 
+
 function toggleCartMobile(){
   if(!isMobile()) return;
   const right = document.getElementById('terminal-right');
@@ -3507,6 +3553,76 @@ window.addEventListener('resize', ()=>{
   if(fab) fab.style.display = isMobile() ? 'flex' : 'none';
   if(!isMobile()) closeCartMobile();
 });
+
+
+
+// ═══ AUTH — 2 CAPAS ═══
+async function authLogin(){
+  const orgId = document.getElementById('auth-orgid')?.value.trim();
+  const pass = document.getElementById('auth-pass')?.value;
+  const errEl = document.getElementById('auth-error');
+  const btn = document.getElementById('auth-btn');
+  if(!orgId || !pass){ if(errEl) errEl.textContent='Completa ambos campos'; return; }
+  if(btn){ btn.textContent='Verificando...'; btn.disabled=true; }
+  if(errEl) errEl.textContent='';
+
+  // ── DEMO MODE: admin / 1234 ──
+  if(orgId === 'admin' && pass === '1234'){
+    localStorage.setItem('merka_org_id', 'demo-mode');
+    localStorage.setItem('merka_demo_mode', 'true');
+    localStorage.setItem('merka_demo_ventas', '0');
+    // Set demo users
+    DB.set('usuarios',[
+      {id:1,nombre:'Administrador Demo',rol:'Administrador',pin:'1234',activo:true,
+       permisos:{verCostos:true,editarInventario:false,eliminarVentas:false,verReportes:true,verGastos:false,gestionarUsuarios:false,abrirCaja:true}}
+    ]);
+    DB.set('config',{businessName:'Demo — Merka POS',rut:'',direccion:'',telefono:'',logo:'',whatsapp:''});
+    if(btn){ btn.textContent='Acceder →'; btn.disabled=false; }
+    showDemoLayer2();
+    return;
+  }
+
+  try {
+    const res = await API.call(ENDPOINTS.auth, {action:'login', org_id: orgId, password: pass});
+    if(res && (Array.isArray(res)?res.length>0:res.org_id)){
+      const negocio = Array.isArray(res) ? res[0] : res;
+      localStorage.setItem('merka_org_id', orgId);
+      localStorage.removeItem('merka_demo_mode');
+      if(negocio.demo_start) localStorage.setItem('merka_demo_start', negocio.demo_start);
+      await DB.load('usuarios');
+      await DB.load('config');
+      updateLogoElements();
+      document.getElementById('login-layer1').style.display = 'none';
+      document.getElementById('login-layer2').style.display = 'block';
+      const usuarios = DB.get('usuarios').filter(u=>u.activo!==false);
+      if(usuarios.length === 0){
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('setupScreen').style.display = 'flex';
+      } else {
+        renderLoginCashiers('loginCashierList','selectLoginUser');
+      }
+    } else {
+      if(errEl) errEl.textContent='ID o contraseña incorrectos';
+    }
+  } catch(e){
+    if(errEl) errEl.textContent='Error de conexión. Intenta de nuevo.';
+  } finally {
+    if(btn){ btn.textContent='Acceder →'; btn.disabled=false; }
+  }
+}
+
+function showDemoLayer2(){
+  document.getElementById('login-layer1').style.display = 'none';
+  document.getElementById('login-layer2').style.display = 'block';
+  renderLoginCashiers('loginCashierList','selectLoginUser');
+}
+
+function backToLayer1(){
+  document.getElementById('login-layer1').style.display = 'block';
+  document.getElementById('login-layer2').style.display = 'none';
+  document.getElementById('loginCashierList').innerHTML = '';
+  localStorage.removeItem('merka_org_id');
+}
 
 
 // ═══ PRIMER USUARIO (SETUP) ═══
@@ -3589,49 +3705,62 @@ function cobrarCredito(){
   const clienteVal = document.getElementById('t-cliente')?.value || tCliente;
   if(!clienteVal){ showToast('Selecciona un cliente para vender a crédito','error'); return; }
   const cliente = DB.get('clientes').find(c=>c.nombre===clienteVal);
-  if(!cliente){ showToast('Cliente no encontrado','error'); return; }
+  if(!cliente){ showToast('Cliente no encontrado en el sistema','error'); return; }
+
+  const total = tCart.reduce((s,i)=>s+Math.round(i.precio*i.qty),0);
+  const hoy = today();
+
+  // Auto-calculate vencimiento from client credit days
+  const diasCredito = cliente.diasCredito || 30;
+  const vence = new Date(Date.now()+diasCredito*24*60*60*1000).toISOString().split('T')[0];
 
   // Check credit limit
+  let disponible = null;
   if(cliente.limiteCredito > 0){
     const deudaActual = DB.get('cobrar').filter(c=>c.clienteId===cliente.id).reduce((s,c)=>s+(c.monto-c.pagado),0);
-    const total = tCart.reduce((s,i)=>s+Math.round(i.precio*i.qty),0);
-    if(deudaActual + total > cliente.limiteCredito){
-      showToast(`Límite de crédito excedido. Disponible: ${fmt(cliente.limiteCredito-deudaActual)}`,'error');
+    disponible = cliente.limiteCredito - deudaActual;
+    if(disponible < total){
+      showToast(`Límite de crédito insuficiente. Disponible: ${fmt(disponible)}`,'error');
       return;
     }
   }
 
-  // Show credit confirmation modal
-  const total = tCart.reduce((s,i)=>s+Math.round(i.precio*i.qty),0);
-  const hoy = today();
-  const vence30 = new Date(Date.now()+30*24*60*60*1000).toISOString().split('T')[0];
   openModal(`
-    <div class="modal-title">💳 Venta a Crédito</div>
-    <div style="background:var(--acc-dim);border:1px solid var(--acc-bdr);border-radius:var(--radius);padding:14px 16px;margin-bottom:18px;">
-      <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Cliente · Monto</div>
-      <div style="font-size:18px;font-weight:800;font-family:var(--mono)">${clienteVal} · ${fmt(total)}</div>
+    <div class="modal-title">📋 Venta a crédito</div>
+    <div style="background:var(--acc-dim);border:1px solid var(--acc-bdr);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:12px;color:var(--muted)">Cliente</div>
+          <div style="font-size:15px;font-weight:700">${clienteVal}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:12px;color:var(--muted)">Total a fiar</div>
+          <div style="font-size:20px;font-weight:800;font-family:var(--mono);color:var(--acc)">${fmt(total)}</div>
+        </div>
+      </div>
+      ${cliente.limiteCredito>0?`<div style="margin-top:10px;font-size:11px;color:var(--muted)">Límite disponible: <strong style="color:var(--green)">${fmt(disponible)}</strong> de ${fmt(cliente.limiteCredito)}</div>`:''}
     </div>
-    <div class="form-grid">
-      <div class="form-group"><label>Concepto</label>
-        <input id="cred-concepto" value="Venta del ${hoy}" placeholder="Descripción de la venta">
-      </div>
-      <div class="form-group"><label>Fecha vencimiento</label>
-        <input id="cred-vence" type="date" value="${vence30}">
-      </div>
+    <div style="display:flex;justify-content:space-between;padding:10px 14px;background:var(--sur2);border-radius:var(--radius-sm);margin-bottom:14px;font-size:13px;">
+      <span style="color:var(--muted)">Días de crédito</span>
+      <strong>${diasCredito} días · Vence ${vence}</strong>
+    </div>
+    <div class="form-group">
+      <label>Concepto (opcional)</label>
+      <input id="cred-concepto" value="Compra del ${hoy}" placeholder="Descripción">
     </div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmarVentaCredito()">Confirmar venta a crédito</button>
+      <button class="btn btn-primary" onclick="confirmarVentaCredito('${vence}')">Confirmar venta →</button>
     </div>
   `);
 }
 
-async function confirmarVentaCredito(){
+async function confirmarVentaCredito(venceParam){
   const clienteVal = document.getElementById('t-cliente')?.value || tCliente;
   const cliente = DB.get('clientes').find(c=>c.nombre===clienteVal);
   const total = tCart.reduce((s,i)=>s+Math.round(i.precio*i.qty),0);
   const concepto = document.getElementById('cred-concepto')?.value.trim() || `Venta del ${today()}`;
-  const vence = document.getElementById('cred-vence')?.value;
+  const vence = venceParam || document.getElementById('cred-vence')?.value;
   const hoy = today();
 
   // Register sale
@@ -3666,39 +3795,47 @@ async function confirmarVentaCredito(){
 }
 
 
-// ═══ BARCODE SCANNER ═══
-let barcodeMode = false;
+// ═══ BARCODE SCANNER — SIEMPRE ACTIVO ═══
+// Detecta automáticamente input rápido de pistola lectora
+// Una pistola envía todos los chars en <50ms, un humano tarda >100ms entre teclas
 let barcodeBuffer = '';
 let barcodeTimer = null;
-
-function toggleBarcodeMode(){
-  barcodeMode = !barcodeMode;
-  const btn = document.getElementById('barcode-toggle-btn');
-  const ind = document.getElementById('barcode-indicator');
-  const inp = document.getElementById('barcode-input');
-  if(btn) btn.classList.toggle('active', barcodeMode);
-  if(ind) ind.classList.toggle('on', barcodeMode);
-  if(barcodeMode && inp){ inp.focus(); }
-}
+let lastKeyTime = 0;
+const BARCODE_SPEED_THRESHOLD = 50; // ms entre teclas para detectar pistola
 
 function initBarcodeListener(){
   document.addEventListener('keydown', e=>{
     if(currentPage !== 'terminal') return;
-    if(!barcodeMode) return;
-    // Barcode scanners send chars rapidly and end with Enter
+
+    // Ignore if user is typing in an input/textarea (except barcode search)
+    const tag = document.activeElement?.tagName;
+    const isSearchInput = document.activeElement?.id === 't-search';
+    if((tag === 'INPUT' || tag === 'TEXTAREA') && !isSearchInput) return;
+
+    const now = Date.now();
+    const timeSinceLastKey = now - lastKeyTime;
+    lastKeyTime = now;
+
     if(e.key === 'Enter'){
       if(barcodeBuffer.length > 2){
+        // Only process as barcode if it came in fast (pistola)
         processBarcodeInput(barcodeBuffer.trim());
+        e.preventDefault();
       }
       barcodeBuffer = '';
       clearTimeout(barcodeTimer);
-      e.preventDefault();
       return;
     }
+
     if(e.key.length === 1){
+      // If typing slowly (human), clear buffer — only accumulate fast input
+      if(timeSinceLastKey > 150 && barcodeBuffer.length > 0){
+        barcodeBuffer = '';
+      }
       barcodeBuffer += e.key;
       clearTimeout(barcodeTimer);
-      barcodeTimer = setTimeout(()=>{ barcodeBuffer=''; }, 100);
+      // Auto-clear buffer after 200ms of inactivity
+      barcodeTimer = setTimeout(()=>{ barcodeBuffer=''; }, 200);
     }
   });
 }
@@ -4359,20 +4496,26 @@ async function syncAll(showFeedback=false){
   setSyncState('syncing');
   try {
     let anyFailed = false;
+    // Skip sync in demo mode — no real data
+    if(isDemoMode()){
+      setSyncState('ok');
+      _lastSync = Date.now();
+      _syncPending = false;
+      return;
+    }
     await Promise.all(SYNC_MODULES.map(async m => {
       try {
         const data = await API.getAll(m);
         if(data && Array.isArray(data)){
-          const normalized = data.map(r => normalizeRecord(m, r));
-          CACHE[m] = normalized;
-          localStorage.setItem('merka_'+m, JSON.stringify(normalized));
+          CACHE[m] = data;
+          localStorage.setItem('merka_'+m, JSON.stringify(data));
         }
       } catch(e){ anyFailed = true; }
     }));
     _lastSync = Date.now();
     setSyncState(anyFailed ? 'error' : 'ok');
     if(showFeedback) showToast(anyFailed ? 'Sync parcial — revisa conexión' : '✓ Datos actualizados', anyFailed ? 'error' : 'success');
-    // Refresh current page silently if data may have changed
+    // Refresh current page after sync
     if(currentPage && currentPage !== 'terminal'){
       const pages = {dashboard:renderDashboard,inventario:renderInventario,ventas:renderVentas,clientes:renderClientes,proveedores:renderProveedores,pagar:renderPagar,gastos:renderGastos,cierre:renderCierre,reportes:renderReportes,auditoria:renderAuditoria,calendario:renderCalendario};
       if(pages[currentPage]) pages[currentPage]();
@@ -4422,53 +4565,72 @@ function logoutSession(){
   localStorage.removeItem('merka_session');
   // Stop polling
   if(_syncInterval) clearInterval(_syncInterval);
+  localStorage.removeItem('merka_org_id');
   document.getElementById('app').classList.add('hidden');
   document.getElementById('loginScreen').style.display = 'flex';
-  renderLoginCashiers('loginCashierList','selectLoginUser');
+  document.getElementById('login-layer1').style.display = 'block';
+  document.getElementById('login-layer2').style.display = 'none';
+  if(document.getElementById('auth-pass')) document.getElementById('auth-pass').value='';
+  if(document.getElementById('auth-error')) document.getElementById('auth-error').textContent='';
   closeSidebar();
 }
 
-function checkOrgSetup(){
-  const orgId = localStorage.getItem('merka_org_id');
-  if(!orgId || orgId === 'default'){
-    // Show setup if admin and no org_id configured
-    if(session && session.rol === 'Administrador'){
-      showOrgSetupBanner();
-    }
+// org setup removed
+
+
+// ═══ DEMO MODE RESTRICTIONS ═══
+function isDemoMode(){
+  return localStorage.getItem('merka_demo_mode') === 'true';
+}
+
+function checkDemoVentaLimit(){
+  if(!isDemoMode()) return true;
+  const ventas = parseInt(localStorage.getItem('merka_demo_ventas')||'0');
+  if(ventas >= 5){
+    openModal(`
+      <div class="modal-title">🔒 Límite de demo alcanzado</div>
+      <div style="text-align:center;padding:20px 0;">
+        <div style="font-size:48px;margin-bottom:16px">🛒</div>
+        <div style="font-size:15px;font-weight:600;margin-bottom:10px">Has usado las 5 ventas de prueba</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.6">
+          Para seguir vendiendo sin límites,<br>activa tu suscripción en <strong>merkapos.pro</strong>
+        </div>
+        <a href="https://merkapos.pro#pricing" target="_blank" class="btn btn-primary" style="display:inline-block;text-decoration:none;padding:14px 28px;font-size:15px;">
+          Ver planes →
+        </a>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cerrar</button>
+      </div>
+    `);
+    return false;
   }
+  return true;
 }
 
-function showOrgSetupBanner(){
-  const existing = document.getElementById('org-setup-banner');
-  if(existing) return;
-  const banner = document.createElement('div');
-  banner.id = 'org-setup-banner';
-  banner.style.cssText = `position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
-    background:var(--sur);border:1.5px solid var(--acc);border-radius:14px;
-    padding:16px 20px;z-index:500;box-shadow:0 8px 32px rgba(0,0,0,0.3);
-    max-width:420px;width:calc(100% - 40px);`;
+function incrementDemoVentas(){
+  if(!isDemoMode()) return;
+  const v = parseInt(localStorage.getItem('merka_demo_ventas')||'0');
+  localStorage.setItem('merka_demo_ventas', v+1);
+}
+
+function showDemoBanner(){
+  if(!isDemoMode()) return;
+  const ventas = parseInt(localStorage.getItem('merka_demo_ventas')||'0');
+  const restantes = 5 - ventas;
+  const banner = document.getElementById('demo-banner');
+  if(!banner) return;
+  banner.style.display = 'flex';
+  banner.style.background = restantes <= 1 ? 'rgba(220,38,38,0.1)' : 'rgba(14,165,233,0.08)';
+  banner.style.borderColor = restantes <= 1 ? 'rgba(220,38,38,0.3)' : 'rgba(14,165,233,0.15)';
   banner.innerHTML = `
-    <div style="font-size:13px;font-weight:700;margin-bottom:6px;color:var(--acc)">⚙ Configurar ID del negocio</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Para separar tus datos de otros negocios, define un ID único (sin espacios).</div>
-    <div style="display:flex;gap:8px;">
-      <input id="org-id-input" placeholder="ej: minimarket-juan-2026"
-        style="flex:1;padding:8px 12px;border:1.5px solid var(--bdr);border-radius:8px;
-        background:var(--sur2);color:var(--text);font-size:13px;font-family:var(--mono);outline:none;">
-      <button onclick="setOrgId()" class="btn btn-primary btn-sm">Guardar</button>
-      <button onclick="document.getElementById('org-setup-banner').remove()" class="btn btn-ghost btn-sm">✕</button>
-    </div>`;
-  document.body.appendChild(banner);
-  const inp = document.getElementById('org-id-input');
-  if(inp) inp.focus();
-}
-
-function setOrgId(){
-  const val = document.getElementById('org-id-input')?.value.trim().replace(/[^a-z0-9\-_]/gi,'');
-  if(!val || val.length < 3){ showToast('ID debe tener al menos 3 caracteres', 'error'); return; }
-  localStorage.setItem('merka_org_id', val);
-  document.getElementById('org-setup-banner')?.remove();
-  showToast(`✓ ID configurado: ${val}. Recarga para aplicar.`, 'success');
-  setTimeout(()=>location.reload(), 2000);
+    <span style="font-size:12px;font-weight:600;color:${restantes<=1?'var(--red)':'var(--text)'}">
+      🎯 Modo demo — <strong>${restantes} venta${restantes!==1?'s':''} restante${restantes!==1?'s':''}</strong> de 5
+    </span>
+    <a href="https://merkapos.pro#pricing" target="_blank"
+      style="font-size:11px;color:var(--acc);font-weight:700;text-decoration:none;margin-left:12px;">
+      Activar sistema completo →
+    </a>`;
 }
 
 // ═══ INIT ═══
@@ -4489,17 +4651,17 @@ async function init(){
   initBarcodeListener();
   updateLogoElements();
   // Always show login screen — never auto-enter
-  const usuarios = DB.get('usuarios').filter(u=>u.activo!==false);
-  if(usuarios.length === 0){
-    // First time — show setup screen
-    document.getElementById('setupScreen').style.display = 'flex';
-    updateLogoElements();
-  } else {
-    // Always show login picker
-    document.getElementById('loginScreen').style.display = 'flex';
-    renderLoginCashiers('loginCashierList','selectLoginUser');
-    document.getElementById('topbarDate').textContent = todayLabel();
-    updateLogoElements();
+  // Always show layer 1 auth first
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('login-layer1').style.display = 'block';
+  document.getElementById('login-layer2').style.display = 'none';
+  document.getElementById('topbarDate').textContent = todayLabel();
+  updateLogoElements();
+  // If org_id already stored, pre-fill
+  const storedOrg = localStorage.getItem('merka_org_id');
+  if(storedOrg && document.getElementById('auth-orgid')){
+    document.getElementById('auth-orgid').value = storedOrg;
+    document.getElementById('auth-pass')?.focus();
   }
 }
 init();
