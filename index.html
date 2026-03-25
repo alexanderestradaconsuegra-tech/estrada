@@ -858,6 +858,37 @@ select option{background:var(--sur);}
   </div>
 </div>
 
+<!-- FIRST TIME SETUP -->
+<div class="login-screen" id="setupScreen" style="display:none">
+  <div class="login-card" style="max-width:420px">
+    <div class="login-logo">
+      <div class="login-logo-icon" id="setup-logo-el">M</div>
+      <div class="login-logo-text">
+        <div class="brand">Merka POS</div>
+        <div class="tagline">Configuración inicial</div>
+      </div>
+    </div>
+    <div class="login-h" style="font-size:20px">¡Bienvenido!</div>
+    <div class="login-sub" style="margin-bottom:24px">Crea el usuario administrador para comenzar. Tienes <strong style="color:var(--acc)">7 días gratis</strong> para probar el sistema.</div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
+      <div>
+        <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono)">Nombre completo</label>
+        <input id="setup-nombre" placeholder="Tu nombre" style="width:100%;margin-top:6px;padding:11px 14px;border:1.5px solid var(--bdr);border-radius:var(--radius-sm);background:var(--sur2);color:var(--text);font-size:14px;outline:none">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono)">Nombre del negocio</label>
+        <input id="setup-negocio" placeholder="Mi Minimarket" style="width:100%;margin-top:6px;padding:11px 14px;border:1.5px solid var(--bdr);border-radius:var(--radius-sm);background:var(--sur2);color:var(--text);font-size:14px;outline:none">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono)">PIN de acceso (4-6 dígitos)</label>
+        <input id="setup-pin" type="password" placeholder="••••" maxlength="6" style="width:100%;margin-top:6px;padding:11px 14px;border:1.5px solid var(--bdr);border-radius:var(--radius-sm);background:var(--sur2);color:var(--text);font-size:14px;outline:none;font-family:var(--mono)">
+      </div>
+    </div>
+    <button class="btn btn-primary btn-lg" style="width:100%" onclick="createFirstAdmin()">Crear cuenta y entrar →</button>
+    <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:14px">Sin tarjeta de crédito · Cancela cuando quieras</div>
+  </div>
+</div>
+
 <!-- SWITCH OVERLAY -->
 <div class="switch-overlay" id="switchOverlay">
   <div class="switch-card">
@@ -918,16 +949,26 @@ select option{background:var(--sur);}
       </button>
       <div class="sync-time" id="sync-time" style="text-align:center;padding:2px 0 4px"></div>
     </div>
-    <div class="session-bar" onclick="openSwitchOverlay()">
+    <div class="session-bar" onclick="openSwitchOverlay()" style="cursor:pointer" title="Cambiar usuario">
       <div class="session-avatar" id="sidebarAvatar"></div>
       <div class="session-info">
         <div class="session-name" id="sidebarName">—</div>
         <div class="session-role" id="sidebarRole">—</div>
       </div>
-      <div class="session-switch">⇄</div>
+      <div class="session-switch" title="Cambiar usuario">⇄</div>
     </div>
+    <button onclick="logoutSession()" style="width:100%;background:none;border:none;border-top:1px solid var(--sb-bdr);
+      padding:8px;font-size:11px;color:var(--sb-muted);cursor:pointer;font-family:var(--sans);
+      transition:color 0.2s;" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--sb-muted)'">
+      Cerrar sesión
+    </button>
   </aside>
 
+  <!-- DEMO BANNER -->
+  <div id="demo-banner" style="display:none;align-items:center;justify-content:center;
+    padding:8px 20px;background:rgba(14,165,233,0.08);border-bottom:1px solid rgba(14,165,233,0.15);
+    position:sticky;top:0;z-index:50;">
+  </div>
   <!-- MAIN -->
   <div class="main">
     <div class="topbar" id="mainTopbar">
@@ -1218,6 +1259,7 @@ function doLogin(){
   showPage('terminal');
   startPolling();
   checkOrgSetup();
+  setTimeout(checkDemo, 1000);
 }
 function openSwitchOverlay(){
   renderLoginCashiers('switchCashierList','selectSwitchUser');
@@ -1459,6 +1501,10 @@ function renderTerminal(){
           <button class="t-cobrar-btn" id="t-cobrar-btn" onclick="cobrarVenta()" disabled>
             Cobrar venta
           </button>
+          <button class="t-cobrar-btn" id="t-credito-btn" onclick="cobrarCredito()" disabled
+            style="background:rgba(101,163,13,0.12);color:var(--green);border:1.5px solid rgba(101,163,13,0.25);margin-top:6px;font-size:13px;">
+            💳 Vender a crédito
+          </button>
           <button class="t-clear-btn" onclick="clearCart()">Limpiar carrito</button>
         </div>
       </div>
@@ -1636,6 +1682,7 @@ function renderCart(){
   if(totalEl) totalEl.textContent = fmt(total);
   if(countEl) countEl.textContent = count+' item'+(count!==1?'s':'');
   if(cobrarBtn) cobrarBtn.disabled = tCart.length===0;
+  const credBtn=document.getElementById('t-credito-btn'); if(credBtn) credBtn.disabled=tCart.length===0;
   updateCartFab();
   if(!tCart.length){
     list.innerHTML = `<div class="t-cart-empty"><div class="t-cart-empty-icon">🛒</div><div style="font-size:13px;font-weight:600;color:var(--text)">Carrito vacío</div><div style="font-size:12px">Haz click en un producto</div></div>`;
@@ -3461,6 +3508,164 @@ window.addEventListener('resize', ()=>{
   if(!isMobile()) closeCartMobile();
 });
 
+
+// ═══ PRIMER USUARIO (SETUP) ═══
+async function createFirstAdmin(){
+  const nombre = document.getElementById('setup-nombre')?.value.trim();
+  const negocio = document.getElementById('setup-negocio')?.value.trim();
+  const pin = document.getElementById('setup-pin')?.value;
+  if(!nombre) return showToast('Ingresa tu nombre','error');
+  if(!pin || pin.length < 4) return showToast('PIN debe tener al menos 4 dígitos','error');
+
+  // Generate org_id from business name
+  const orgId = (negocio||nombre).toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9]/g,'-').replace(/-+/g,'-')
+    .slice(0,30) + '-' + Date.now().toString().slice(-4);
+  localStorage.setItem('merka_org_id', orgId);
+
+  // Create admin user
+  const admin = {
+    id: Date.now(),
+    nombre,
+    rol: 'Administrador',
+    pin,
+    activo: true,
+    permisos: {verCostos:true,editarInventario:true,eliminarVentas:true,verReportes:true,verGastos:true,gestionarUsuarios:true,abrirCaja:true}
+  };
+  const usuarios = [admin];
+  DB.set('usuarios', usuarios);
+  await DB.sync('usuarios', admin);
+
+  // Save business name in config
+  const cfg = {businessName: negocio||nombre, rut:'', direccion:'', telefono:'', email:'', logo:'', whatsapp:''};
+  DB.set('config', cfg);
+  await API.call(ENDPOINTS.configuracion, {action:'save', data: cfg}).catch(()=>{});
+
+  // Set demo start date
+  localStorage.setItem('merka_demo_start', new Date().toISOString());
+
+  // Auto-login
+  session = {id: admin.id, nombre: admin.nombre, rol: admin.rol};
+  localStorage.setItem('merka_session', JSON.stringify(session));
+  document.getElementById('setupScreen').style.display = 'none';
+  document.getElementById('app').classList.remove('hidden');
+  updateSessionUI();
+  updateLogoElements();
+  showPage('terminal');
+  startPolling();
+  showToast(`¡Bienvenido, ${nombre}! 7 días de prueba gratuita.`, 'success');
+}
+
+// ═══ DEMO BANNER ═══
+function checkDemo(){
+  const demoStart = localStorage.getItem('merka_demo_start');
+  if(!demoStart) return; // no demo mode
+  const diasTranscurridos = Math.floor((Date.now() - new Date(demoStart).getTime()) / (1000*60*60*24));
+  const diasRestantes = 7 - diasTranscurridos;
+  const banner = document.getElementById('demo-banner');
+  if(!banner) return;
+  if(diasRestantes > 0 && diasRestantes <= 7){
+    banner.style.display = 'flex';
+    banner.innerHTML = `
+      <span style="font-size:12px;font-weight:600">
+        ⏱ Demo gratuita — <strong>${diasRestantes} día${diasRestantes!==1?'s':''} restante${diasRestantes!==1?'s':''}</strong>
+      </span>
+      <a href="#" style="font-size:11px;color:var(--acc);font-weight:700;text-decoration:none;margin-left:12px" onclick="alert('Contacta a tu proveedor para activar tu suscripción.')">Activar →</a>`;
+  } else if(diasRestantes <= 0){
+    banner.style.display = 'flex';
+    banner.style.background = 'rgba(220,38,38,0.1)';
+    banner.style.borderColor = 'rgba(220,38,38,0.3)';
+    banner.innerHTML = `
+      <span style="font-size:12px;font-weight:600;color:var(--red)">
+        ⚠ Demo vencida — El sistema sigue funcionando pero debes activar tu suscripción
+      </span>
+      <a href="#" style="font-size:11px;color:var(--red);font-weight:700;text-decoration:none;margin-left:12px" onclick="alert('Contacta a tu proveedor para activar.')">Activar ahora →</a>`;
+  }
+}
+
+// ═══ VENTA A CRÉDITO ═══
+function cobrarCredito(){
+  const clienteVal = document.getElementById('t-cliente')?.value || tCliente;
+  if(!clienteVal){ showToast('Selecciona un cliente para vender a crédito','error'); return; }
+  const cliente = DB.get('clientes').find(c=>c.nombre===clienteVal);
+  if(!cliente){ showToast('Cliente no encontrado','error'); return; }
+
+  // Check credit limit
+  if(cliente.limiteCredito > 0){
+    const deudaActual = DB.get('cobrar').filter(c=>c.clienteId===cliente.id).reduce((s,c)=>s+(c.monto-c.pagado),0);
+    const total = tCart.reduce((s,i)=>s+Math.round(i.precio*i.qty),0);
+    if(deudaActual + total > cliente.limiteCredito){
+      showToast(`Límite de crédito excedido. Disponible: ${fmt(cliente.limiteCredito-deudaActual)}`,'error');
+      return;
+    }
+  }
+
+  // Show credit confirmation modal
+  const total = tCart.reduce((s,i)=>s+Math.round(i.precio*i.qty),0);
+  const hoy = today();
+  const vence30 = new Date(Date.now()+30*24*60*60*1000).toISOString().split('T')[0];
+  openModal(`
+    <div class="modal-title">💳 Venta a Crédito</div>
+    <div style="background:var(--acc-dim);border:1px solid var(--acc-bdr);border-radius:var(--radius);padding:14px 16px;margin-bottom:18px;">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Cliente · Monto</div>
+      <div style="font-size:18px;font-weight:800;font-family:var(--mono)">${clienteVal} · ${fmt(total)}</div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>Concepto</label>
+        <input id="cred-concepto" value="Venta del ${hoy}" placeholder="Descripción de la venta">
+      </div>
+      <div class="form-group"><label>Fecha vencimiento</label>
+        <input id="cred-vence" type="date" value="${vence30}">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarVentaCredito()">Confirmar venta a crédito</button>
+    </div>
+  `);
+}
+
+async function confirmarVentaCredito(){
+  const clienteVal = document.getElementById('t-cliente')?.value || tCliente;
+  const cliente = DB.get('clientes').find(c=>c.nombre===clienteVal);
+  const total = tCart.reduce((s,i)=>s+Math.round(i.precio*i.qty),0);
+  const concepto = document.getElementById('cred-concepto')?.value.trim() || `Venta del ${today()}`;
+  const vence = document.getElementById('cred-vence')?.value;
+  const hoy = today();
+
+  // Register sale
+  const items = tCart.map(i=>({
+    productoId:i.productoId, nombre:i.nombre+(i.esPeso?` (${i.qtyLabel})`:''),
+    qty:i.qty, precio:i.precio,
+    precioOriginal:i.precioOriginal||null,
+    descuento:i.precioOriginal?Math.round((1-i.precio/i.precioOriginal)*100):0,
+    subtotal:Math.round(i.precio*i.qty),
+    esPeso:i.esPeso||false, qtyLabel:i.qtyLabel||null
+  }));
+  const venta = {id:Date.now(),fecha:hoy,items,total,cliente:clienteVal,nota:'Venta a crédito',metodo:'Crédito',cajero:session?session.nombre:'—'};
+  const ventas = DB.get('ventas'); ventas.push(venta);
+  DB.set('ventas', ventas);
+  DB.sync('ventas', venta);
+
+  // Create cuenta por cobrar automatically
+  const cuenta = {
+    id:Date.now()+1, clienteId:cliente?.id||0,
+    concepto, monto:total, pagado:0,
+    fecha:hoy, vencimiento:vence||hoy,
+    pagos:[]
+  };
+  const cobrar = DB.get('cobrar'); cobrar.push(cuenta);
+  DB.set('cobrar', cobrar);
+  DB.sync('cobrar', cuenta);
+
+  logAudit('Venta a crédito','Terminal',`${clienteVal} · ${fmt(total)}`);
+  closeModal();
+  clearCart();
+  showSuccessFlash(total, 'Crédito', venta.id);
+}
+
+
 // ═══ BARCODE SCANNER ═══
 let barcodeMode = false;
 let barcodeBuffer = '';
@@ -4211,6 +4416,18 @@ window.addEventListener('offline', ()=> setSyncState('offline'));
 
 
 // ═══ ORG_ID SETUP ═══
+function logoutSession(){
+  if(!confirm('¿Cerrar sesión?')) return;
+  session = null;
+  localStorage.removeItem('merka_session');
+  // Stop polling
+  if(_syncInterval) clearInterval(_syncInterval);
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('loginScreen').style.display = 'flex';
+  renderLoginCashiers('loginCashierList','selectLoginUser');
+  closeSidebar();
+}
+
 function checkOrgSetup(){
   const orgId = localStorage.getItem('merka_org_id');
   if(!orgId || orgId === 'default'){
@@ -4271,16 +4488,18 @@ async function init(){
   ]).catch(()=>{});
   initBarcodeListener();
   updateLogoElements();
-  if(session && DB.get('usuarios').find(u=>u.id===session.id)){
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('app').classList.remove('hidden');
-    updateSessionUI();
-    showPage('terminal');
-    // Start auto-sync after login
-    startPolling();
+  // Always show login screen — never auto-enter
+  const usuarios = DB.get('usuarios').filter(u=>u.activo!==false);
+  if(usuarios.length === 0){
+    // First time — show setup screen
+    document.getElementById('setupScreen').style.display = 'flex';
+    updateLogoElements();
   } else {
+    // Always show login picker
+    document.getElementById('loginScreen').style.display = 'flex';
     renderLoginCashiers('loginCashierList','selectLoginUser');
     document.getElementById('topbarDate').textContent = todayLabel();
+    updateLogoElements();
   }
 }
 init();
