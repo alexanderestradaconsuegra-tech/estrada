@@ -4808,21 +4808,9 @@ function isDemoMode(){
   return localStorage.getItem('merka_demo_mode') === 'true';
 }
 
-function checkDemoVentaLimit(){
-  if(!isDemoMode()) return true;
-  const ventas = parseInt(localStorage.getItem('merka_demo_ventas')||'0');
-  if(ventas >= 5){
-    showToast('Demo: límite de 5 ventas alcanzado — activa tu plan en merkapos.pro', 'error');
-    return false;
-  }
-  return true;
-}
+function checkDemoVentaLimit(){ return true; }
+function incrementDemoVentas(){}
 
-function incrementDemoVentas(){
-  if(!isDemoMode()) return;
-  const v = parseInt(localStorage.getItem('merka_demo_ventas')||'0');
-  localStorage.setItem('merka_demo_ventas', v+1);
-}
 
 function showDemoBanner(){
   if(!isDemoMode()) return;
