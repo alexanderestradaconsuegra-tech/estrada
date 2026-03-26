@@ -1181,7 +1181,7 @@ select option{background:var(--sur);}
   </div>
 
   <!-- DEMO BANNER -->
-  <div id="demo-banner" style="display:none;align-items:center;justify-content:center;
+  <div id="demo-banner" style="display:none!important;align-items:center;justify-content:center;
     padding:8px 20px;background:rgba(14,165,233,0.08);border-bottom:1px solid rgba(14,165,233,0.15);
     position:sticky;top:0;z-index:50;">
   </div>
@@ -1475,7 +1475,7 @@ function doLogin(){
   document.getElementById('app').classList.remove('hidden');
   updateSessionUI();
   showPage('terminal');
-  if(isDemoMode()){ setTimeout(showDemoBanner, 500); } else { setTimeout(checkDemo, 1000); }
+  setTimeout(checkDemo, 1000);
   startPolling();
   setTimeout(initMobileNav, 100);
 }
@@ -2028,7 +2028,7 @@ function cobrarVenta(){
   DB.sync('ventas', venta);
   logAudit('Venta registrada', 'Terminal', `${fmt(venta.total)} · ${venta.metodo} · ${venta.items.length} productos`);
   incrementDemoVentas();
-  if(isDemoMode()) showDemoBanner();
+
   // Sync stock actualizado de cada producto afectado
   items.forEach(i=>{
     const p = DB.get('productos').find(x=>x.id===i.productoId);
@@ -3802,7 +3802,7 @@ async function authLogin(){
     updateLogoElements();
     showPage('terminal');
     startPolling();
-    setTimeout(showDemoBanner, 500);
+
     if(btn){ btn.textContent='Acceder →'; btn.disabled=false; }
     return;
   }
@@ -3898,32 +3898,8 @@ async function createFirstAdmin(){
   showToast(`¡Bienvenido, ${nombre}! 7 días de prueba gratuita.`, 'success');
 }
 
-// ═══ DEMO BANNER ═══
-function checkDemo(){
-  const demoStart = localStorage.getItem('merka_demo_start');
-  if(!demoStart) return; // no demo mode
-  const diasTranscurridos = Math.floor((Date.now() - new Date(demoStart).getTime()) / (1000*60*60*24));
-  const diasRestantes = 7 - diasTranscurridos;
-  const banner = document.getElementById('demo-banner');
-  if(!banner) return;
-  if(diasRestantes > 0 && diasRestantes <= 7){
-    banner.style.display = 'flex';
-    banner.innerHTML = `
-      <span style="font-size:12px;font-weight:600">
-        ⏱ Demo gratuita — <strong>${diasRestantes} día${diasRestantes!==1?'s':''} restante${diasRestantes!==1?'s':''}</strong>
-      </span>
-      <a href="#" style="font-size:11px;color:var(--acc);font-weight:700;text-decoration:none;margin-left:12px" onclick="alert('Contacta a tu proveedor para activar tu suscripción.')">Activar →</a>`;
-  } else if(diasRestantes <= 0){
-    banner.style.display = 'flex';
-    banner.style.background = 'rgba(220,38,38,0.1)';
-    banner.style.borderColor = 'rgba(220,38,38,0.3)';
-    banner.innerHTML = `
-      <span style="font-size:12px;font-weight:600;color:var(--red)">
-        ⚠ Demo vencida — El sistema sigue funcionando pero debes activar tu suscripción
-      </span>
-      <a href="#" style="font-size:11px;color:var(--red);font-weight:700;text-decoration:none;margin-left:12px" onclick="alert('Contacta a tu proveedor para activar.')">Activar ahora →</a>`;
-  }
-}
+// ═══ DEMO BANNER — removed ═══
+function checkDemo(){}
 
 // ═══ VENTA A CRÉDITO ═══
 function cobrarCredito(){
@@ -4812,24 +4788,7 @@ function checkDemoVentaLimit(){ return true; }
 function incrementDemoVentas(){}
 
 
-function showDemoBanner(){
-  if(!isDemoMode()) return;
-  const ventas = parseInt(localStorage.getItem('merka_demo_ventas')||'0');
-  const restantes = 5 - ventas;
-  const banner = document.getElementById('demo-banner');
-  if(!banner) return;
-  banner.style.display = 'flex';
-  banner.style.background = restantes <= 1 ? 'rgba(220,38,38,0.1)' : 'rgba(14,165,233,0.08)';
-  banner.style.borderColor = restantes <= 1 ? 'rgba(220,38,38,0.3)' : 'rgba(14,165,233,0.15)';
-  banner.innerHTML = `
-    <span style="font-size:12px;font-weight:600;color:${restantes<=1?'var(--red)':'var(--text)'}">
-      🎯 Modo demo — <strong>${restantes} venta${restantes!==1?'s':''} restante${restantes!==1?'s':''}</strong> de 5
-    </span>
-    <a href="https://merkapos.pro#pricing" target="_blank"
-      style="font-size:11px;color:var(--acc);font-weight:700;text-decoration:none;margin-left:12px;">
-      Activar sistema completo →
-    </a>`;
-}
+function showDemoBanner(){}
 
 // ═══ INIT ═══
 async function init(){
