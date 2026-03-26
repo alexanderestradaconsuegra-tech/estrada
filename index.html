@@ -854,16 +854,24 @@ select option{background:var(--sur);}
 .t-success-method{font-size:12px;font-family:var(--mono);color:var(--muted);}
 
 
-/* Mobile — minimal, same as PC */
+/* Mobile */
 @media(max-width:768px){
   .menu-btn{display:flex!important;}
-  .sidebar{transform:translateX(-100%);}
+  .sidebar{
+    position:fixed;z-index:200;height:100%;
+    transform:translateX(-100%);
+    transition:transform 0.25s ease;
+  }
   .sidebar.open{transform:translateX(0);}
-  .main{margin-left:0;}
+  .main{margin-left:0!important;}
+  .mobile-bottom-nav{display:none!important;}
+  .cart-fab{display:none!important;}
+  .cart-overlay{z-index:199;}
 }
 @media(min-width:769px){
   .mobile-bottom-nav{display:none!important;}
   .cart-fab{display:none!important;}
+  .menu-btn{display:none;}
 }
 
 
