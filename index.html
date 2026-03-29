@@ -1157,6 +1157,8 @@ const API = {
     try {
       // Don't override org_id for auth calls — it comes from user input
       const isAuth = endpoint.includes('merka-auth') || endpoint.includes('merka-admin');
+      // Skip all API calls in demo mode (except auth)
+      if(!isAuth && isDemoMode()) return null;
       const payload = isAuth ? body : { ...body, org_id: getOrgId() };
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -1176,7 +1178,7 @@ const API = {
   },
   getAll:  (m)       => API.call(ENDPOINTS[m],    {action:'getAll'}),
   save:    (m, data) => API.call(ENDPOINTS[m],    {action:'save', data}),
-  delete:  (m, id)   => API.call(ENDPOINTS[m],    {action:'delete', id}),
+  delete:  (m, id)   => id !== undefined && id !== null ? API.call(ENDPOINTS[m], {action:'delete', id}) : Promise.resolve(null),
   pago:    (cuentaId, monto, fecha, nota) =>
     API.call(ENDPOINTS.cobrar, {action:'pago', cuentaId, monto, fecha, nota}),
   pagoProveedor: (cuentaId, monto, fecha, nota) =>
