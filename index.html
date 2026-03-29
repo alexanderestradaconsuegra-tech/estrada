@@ -3682,8 +3682,9 @@ async function authLogin(){
 
   try {
     const res = await API.call(ENDPOINTS.auth, {action:'login', org_id: orgId, password: pass});
-    if(res && (res.found === true || res.org_id || (Array.isArray(res) && res.length > 0 && res[0].org_id))){
-      const negocio = Array.isArray(res) ? res[0] : res;
+    const resData = res?.data || res;
+    if(resData && (resData.found === true || resData.org_id)){
+      const negocio = resData;
       localStorage.setItem('merka_org_id', orgId);
       localStorage.removeItem('merka_demo_mode');
       if(negocio.demo_start) localStorage.setItem('merka_demo_start', negocio.demo_start);
