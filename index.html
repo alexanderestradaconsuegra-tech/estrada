@@ -1135,7 +1135,8 @@ const N8N = 'https://n8n-n8n.fa2cjf.easypanel.host/webhook';
 // ═══ ORG_ID — Identificador único de este negocio ═══
 // Cambiar este valor por un ID único para cada cliente
 // Ejemplo: 'negocio-juan-2026' o 'minimarket-santiago-001'
-const ORG_ID = localStorage.getItem('merka_org_id') || 'default';
+let ORG_ID = localStorage.getItem('merka_org_id') || 'default';
+function getOrgId(){ return localStorage.getItem('merka_org_id') || 'default'; }
 
 const ENDPOINTS = {
   productos:     N8N + '/merka-productos',
@@ -1156,7 +1157,7 @@ const API = {
     try {
       // Don't override org_id for auth calls — it comes from user input
       const isAuth = endpoint.includes('merka-auth') || endpoint.includes('merka-admin');
-      const payload = isAuth ? body : { ...body, org_id: ORG_ID };
+      const payload = isAuth ? body : { ...body, org_id: getOrgId() };
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
@@ -3687,6 +3688,7 @@ async function authLogin(){
     if(resData && (resData.found === true || resData.org_id)){
       const negocio = resData;
       localStorage.setItem('merka_org_id', orgId);
+      ORG_ID = orgId;
       localStorage.removeItem('merka_demo_mode');
       if(negocio.demo_start) localStorage.setItem('merka_demo_start', negocio.demo_start);
       await DB.load('usuarios');
