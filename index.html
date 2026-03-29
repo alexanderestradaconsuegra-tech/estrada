@@ -1154,8 +1154,9 @@ const ENDPOINTS = {
 const API = {
   async call(endpoint, body) {
     try {
-      // Siempre incluir org_id en todas las llamadas
-      const payload = { ...body, org_id: ORG_ID };
+      // Don't override org_id for auth calls — it comes from user input
+      const isAuth = endpoint.includes('merka-auth') || endpoint.includes('merka-admin');
+      const payload = isAuth ? body : { ...body, org_id: ORG_ID };
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
