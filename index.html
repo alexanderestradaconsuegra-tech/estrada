@@ -4721,6 +4721,14 @@ function renderAgente(){
         </div>
       </div>
 
+      <!-- Action tools -->
+      <div style="padding:12px 20px;border-bottom:1px solid var(--bdr);flex-shrink:0;display:flex;gap:8px;flex-wrap:wrap;">
+        <button onclick="agenteHerramienta('orden_compra')" style="padding:7px 14px;background:rgba(14,165,233,0.08);border:1px solid rgba(14,165,233,0.25);border-radius:8px;color:var(--acc);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--mono);transition:all 0.15s;" onmouseover="this.style.background='rgba(14,165,233,0.15)'" onmouseout="this.style.background='rgba(14,165,233,0.08)'">📦 Orden de compra</button>
+        <button onclick="agenteHerramienta('detector_perdidas')" style="padding:7px 14px;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);border-radius:8px;color:#f87171;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--mono);transition:all 0.15s;" onmouseover="this.style.background='rgba(248,113,113,0.15)'" onmouseout="this.style.background='rgba(248,113,113,0.08)'">🔍 Detector pérdidas</button>
+        <button onclick="agenteHerramienta('analisis_cajeros')" style="padding:7px 14px;background:rgba(132,204,22,0.08);border:1px solid rgba(132,204,22,0.25);border-radius:8px;color:var(--lime);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--mono);transition:all 0.15s;" onmouseover="this.style.background='rgba(132,204,22,0.15)'" onmouseout="this.style.background='rgba(132,204,22,0.08)'">👤 Análisis cajeros</button>
+        <button onclick="agenteHerramienta('precios_desactualizados')" style="padding:7px 14px;background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.25);border-radius:8px;color:#fb923c;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--mono);transition:all 0.15s;" onmouseover="this.style.background='rgba(251,146,60,0.15)'" onmouseout="this.style.background='rgba(251,146,60,0.08)'">💰 Precios desactualizados</button>
+      </div>
+
       <!-- Chat messages -->
       <div id="agente-messages" style="flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px;">
         <div style="text-align:center;padding:20px 0;">
@@ -4765,6 +4773,164 @@ function agenteAddMessage(role, text){
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
 }
+
+function agenteHerramienta(tipo){
+  document.getElementById('sugerencias-wrap')?.remove();
+  const ventas = DB.get('ventas') || [];
+  const productos = DB.get('productos') || [];
+  const clientes = DB.get('clientes') || [];
+  const gastos = DB.get('gastos') || [];
+  const cierres = DB.get('cierres') || [];
+
+  let prompt = '';
+
+  if(tipo === 'orden_compra'){
+    const stockBajo = productos.filter(p => parseFloat(p.stock) < 5);
+    const ventasPorProducto = {};
+    ventas.forEach(v => (v.items||[]).forEach(it => {
+      ventasPorProducto[it.nombre] = (ventasPorProducto[it.nombre]||0) + parseFloat(it.qty||1);
+    }));
+    const datos = stockBajo.map(p => ({
+      nombre: p.nombre,
+      stock_actual: p.stock,
+      unidad: p.unidad,
+      ventas_totales: ventasPorProducto[p.nombre] || 0
+    }));
+    prompt = `Genera una orden de compra para los siguientes productos con stock bajo. Para cada uno sugiere cuánto pedir basándote en el historial de ventas. Formato claro y profesional:\n\n${JSON.stringify(datos, null, 2)}`;
+  }
+
+  else if(tipo === 'detector_perdidas'){
+    // Compare theoretical stock vs real stock
+    const stockInicial = {};
+    productos.forEach(p => { stockInicial[p.id] = { nombre: p.nombre, stock: parseFloat(p.stock), vendido: 0 }; });
+    ventas.forEach(v => (v.items||[]).forEach(it => {
+      const p = productos.find(x => x.nombre === it.nombre);
+      if(p && stockInicial[p.id]) stockInicial[p.id].vendido += parseFloat(it.qty||1);
+    }));
+    const posiblesPerdidas = Object.values(stockInicial).filter(p => {
+      const stockTeorico = p.stock + p.vendido;
+      return stockTeorico > p.stock * 1.3; // más del 30% de diferencia
+    });
+    // Analisis por cajero y turno
+    const ventasPorCajero = {};
+    ventas.forEach(v => {
+      if(!ventasPorCajero[v.cajero]) ventasPorCajero[v.cajero] = {ventas:0, total:0};
+      ventasPorCajero[v.cajero].ventas++;
+      ventasPorCajero[v.cajero].total += v.total;
+    });
+    prompt = `Analiza posibles pérdidas o robos en este negocio. 
+
+Datos de stock y ventas por producto:
+${JSON.stringify(Object.values(stockInicial).slice(0,20), null, 2)}
+
+Ventas por cajero:
+${JSON.stringify(ventasPorCajero, null, 2)}
+
+Identifica anomalías, diferencias sospechosas entre stock teórico y real, y cajeros con patrones inusuales. Sé específico.`;
+  }
+
+  else if(tipo === 'analisis_cajeros'){
+    const stats = {};
+    ventas.forEach(v => {
+      const c = v.cajero || 'Sin nombre';
+      if(!stats[c]) stats[c] = {ventas:0, total:0, metodos:{}, tickets:[]};
+      stats[c].ventas++;
+      stats[c].total += v.total;
+      stats[c].tickets.push(v.total);
+      stats[c].metodos[v.metodo] = (stats[c].metodos[v.metodo]||0) + 1;
+    });
+    Object.keys(stats).forEach(c => {
+      const t = stats[c].tickets;
+      stats[c].ticket_promedio = t.length ? Math.round(t.reduce((a,b)=>a+b,0)/t.length) : 0;
+      delete stats[c].tickets;
+    });
+    prompt = `Analiza el rendimiento de cada cajero y compáralos. Identifica quién vende más, ticket promedio, métodos de pago preferidos, y da recomendaciones específicas para mejorar el rendimiento del equipo:\n\n${JSON.stringify(stats, null, 2)}`;
+  }
+
+  else if(tipo === 'precios_desactualizados'){
+    const conMargen = productos.map(p => {
+      const margen = p.precioCompra > 0 ? ((p.precioVenta - p.precioCompra) / p.precioCompra) * 100 : null;
+      const ventasCount = ventas.reduce((s,v) => s + (v.items||[]).filter(it=>it.nombre===p.nombre).length, 0);
+      return {
+        nombre: p.nombre,
+        precio_compra: p.precioCompra,
+        precio_venta: p.precioVenta,
+        margen_pct: margen ? Math.round(margen) : 'sin costo',
+        veces_vendido: ventasCount
+      };
+    }).filter(p => p.margen_pct !== 'sin costo');
+
+    const bajosMargen = conMargen.filter(p => p.margen_pct < 15).sort((a,b) => a.margen_pct - b.margen_pct);
+    const altoMargen = conMargen.filter(p => p.margen_pct > 60).sort((a,b) => b.margen_pct - a.margen_pct);
+
+    prompt = `Analiza estos productos con márgenes anómalos y sugiere ajustes de precio concretos. Para los de bajo margen (<15%), calcula el precio sugerido para llegar al 25% de margen. Para los de margen muy alto (>60%), evalúa si bajar el precio podría aumentar las ventas.
+
+Productos con margen BAJO (<15%):
+${JSON.stringify(bajosMargen, null, 2)}
+
+Productos con margen MUY ALTO (>60%):
+${JSON.stringify(altoMargen, null, 2)}`;
+  }
+
+  if(prompt) agenteEnviarTexto(prompt, tipo);
+}
+
+async function agenteEnviarTexto(texto, etiqueta){
+  const labels = {
+    orden_compra: '📦 Generando orden de compra...',
+    detector_perdidas: '🔍 Analizando pérdidas...',
+    analisis_cajeros: '👤 Analizando cajeros...',
+    precios_desactualizados: '💰 Revisando precios...'
+  };
+  agenteAddMessage('user', labels[etiqueta] || texto.slice(0,60)+'...');
+  agenteChatHistory.push({role:'user', content: texto});
+
+  const typing = document.createElement('div');
+  typing.id = 'agente-typing';
+  typing.style.cssText = 'display:flex;justify-content:flex-start';
+  typing.innerHTML = `<div style="padding:12px 16px;background:var(--sur);border:1px solid var(--bdr);border-radius:14px 14px 14px 4px;color:var(--muted);font-size:13px;">✦ Analizando...</div>`;
+  document.getElementById('agente-messages').appendChild(typing);
+  document.getElementById('agente-messages').scrollTop = 99999;
+
+  const btn = document.getElementById('agente-btn');
+  if(btn){ btn.disabled=true; btn.textContent='...'; }
+
+  try {
+    const ventas = DB.get('ventas')||[];
+    const productos = DB.get('productos')||[];
+    const clientes = DB.get('clientes')||[];
+    const cobrar = DB.get('cobrar')||[];
+    const hoy = new Date().toISOString().slice(0,10);
+    const ventasHoy = ventas.filter(v=>v.fecha===hoy);
+    const totalHoy = ventasHoy.reduce((s,v)=>s+v.total,0);
+    const stockBajo = productos.filter(p=>parseFloat(p.stock)<3);
+    const deudaTotal = cobrar.filter(c=>c.pagado<c.monto).reduce((s,c)=>s+(c.monto-c.pagado),0);
+
+    const contexto = `Eres el asistente de análisis de negocio de Merka POS.\nDatos del negocio (${new Date().toLocaleDateString('es-CL')}):\n- Ventas hoy: ${ventasHoy.length} · $${fmt(totalHoy)}\n- Productos: ${productos.length}\n- Stock crítico: ${stockBajo.length} productos\n- Deuda por cobrar: $${fmt(deudaTotal)}`;
+
+    const res = await fetch(AGENTE_ENDPOINT, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        org_id: getOrgId(),
+        mensaje: texto,
+        historial: agenteChatHistory.slice(-4),
+        contexto
+      })
+    });
+    const data = await res.json();
+    const respuesta = data?.respuesta || data?.output || data?.message || 'Sin respuesta.';
+    document.getElementById('agente-typing')?.remove();
+    agenteAddMessage('assistant', respuesta);
+    agenteChatHistory.push({role:'assistant', content: respuesta});
+  } catch(e){
+    document.getElementById('agente-typing')?.remove();
+    agenteAddMessage('assistant', 'Error al conectar con el agente.');
+  } finally {
+    if(btn){ btn.disabled=false; btn.textContent='Enviar'; }
+  }
+}
+
 
 function agenteEnviarSugerencia(texto){
   document.getElementById('sugerencias-wrap')?.remove();
