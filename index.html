@@ -1006,6 +1006,7 @@ select option{background:var(--sur);}
       <div class="nav-item" onclick="showPage('cierre')"><span class="nav-ic">⬫</span>Cierre de Caja</div>
       <div class="nav-section">Análisis</div>
       <div class="nav-item" onclick="showPage('reportes')"><span class="nav-ic">◈</span>Reportes</div>
+      <div class="nav-item" onclick="showPage('agente')" style="color:#a78bfa;"><span class="nav-ic">✦</span>Agente IA</div>
       <div class="nav-section" data-desktop-only="1">Sistema</div>
       <div class="nav-item" data-desktop-only="1" onclick="showPage('auditoria')" id="nav-auditoria"><span class="nav-ic">◷</span>Auditoría</div>
       <div class="nav-item" data-desktop-only="1" onclick="showPage('configuracion')"><span class="nav-ic">⊞</span>Configuración</div>
@@ -1297,11 +1298,11 @@ function showPage(page){
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
   const navEl = document.querySelector(`[onclick="showPage('${page}')"]`);
   if(navEl) navEl.classList.add('active');
-  const titles = {terminal:'Terminal de Ventas',dashboard:'Panel de control',calendario:'Calendario',inventario:'Inventario',ventas:'Ventas del Día',clientes:'Clientes',proveedores:'Proveedores',pagar:'Cuentas por Pagar',gastos:'Gastos',cierre:'Cierre de Caja',reportes:'Reportes',auditoria:'Auditoría',configuracion:'Configuración',usuarios:'Usuarios'};
+  const titles = {terminal:'Terminal de Ventas',dashboard:'Panel de control',agente:'Agente IA ✦',calendario:'Calendario',inventario:'Inventario',ventas:'Ventas del Día',clientes:'Clientes',proveedores:'Proveedores',pagar:'Cuentas por Pagar',gastos:'Gastos',cierre:'Cierre de Caja',reportes:'Reportes',auditoria:'Auditoría',configuracion:'Configuración',usuarios:'Usuarios'};
   document.getElementById('pageTitle').textContent = titles[page]||page;
   updateMobileNav(page);
   document.getElementById('topbarDate').textContent = todayLabel();
-  const pages = {terminal:renderTerminal,dashboard:renderDashboard,calendario:renderCalendario,inventario:renderInventario,ventas:renderVentas,clientes:renderClientes,proveedores:renderProveedores,pagar:renderPagar,gastos:renderGastos,cierre:renderCierre,reportes:renderReportes,auditoria:renderAuditoria,configuracion:renderConfiguracion,usuarios:renderUsuarios};
+  const pages = {terminal:renderTerminal,dashboard:renderDashboard,agente:renderAgente,calendario:renderCalendario,inventario:renderInventario,ventas:renderVentas,clientes:renderClientes,proveedores:renderProveedores,pagar:renderPagar,gastos:renderGastos,cierre:renderCierre,reportes:renderReportes,auditoria:renderAuditoria,configuracion:renderConfiguracion,usuarios:renderUsuarios};
   const isTerminal = page==='terminal';
   document.getElementById('content').style.padding = isTerminal ? '0' : '24px';
   if(pages[page]) pages[page]();
@@ -3071,14 +3072,14 @@ function printBoleta(ventaId){
     <title>Boleta #${String(ventaId).slice(-6)}</title>
     <style>
       *{margin:0;padding:0;box-sizing:border-box;}
-      body{font-family:'Courier New',monospace;font-size:13px;color:#000;padding:20px;max-width:300px;margin:0 auto;}
+      body{font-family:'Courier New',Courier,monospace;font-size:14px;color:#000 !important;background:#fff !important;padding:16px;max-width:320px;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
       .center{text-align:center;}
-      .title{font-size:18px;font-weight:bold;margin-bottom:4px;}
-      .divider{border-top:1px dashed #000;margin:10px 0;}
-      .row{display:flex;justify-content:space-between;padding:3px 0;}
-      .total-row{display:flex;justify-content:space-between;padding:6px 0;font-size:16px;font-weight:bold;}
-      .small{font-size:11px;color:#555;}
-      @media print{body{padding:0;}}
+      .title{font-size:20px;font-weight:bold;margin-bottom:4px;letter-spacing:-0.5px;}
+      .divider{border-top:2px dashed #000;margin:10px 0;}
+      .row{display:flex;justify-content:space-between;padding:4px 0;font-size:13px;}
+      .total-row{display:flex;justify-content:space-between;padding:8px 0;font-size:18px;font-weight:bold;border-top:2px solid #000;margin-top:4px;}
+      .small{font-size:12px;color:#333;}
+      @media print{body{padding:4px;} * {-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
     </style>
   </head><body>
     <div class="center">
@@ -3115,7 +3116,7 @@ function printCierre(cierreId){
   const cfg = DB.get('config')||{};
   const win = window.open('','_blank','width=400,height=500');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cierre ${c.fecha}</title>
-  <style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Courier New',monospace;font-size:13px;padding:20px;max-width:300px;margin:0 auto;}
+  <style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Courier New',Courier,monospace;font-size:14px;color:#000 !important;background:#fff !important;padding:16px;max-width:320px;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
   .center{text-align:center;}.divider{border-top:1px dashed #000;margin:10px 0;}.row{display:flex;justify-content:space-between;padding:4px 0;}
   .total{display:flex;justify-content:space-between;padding:6px 0;font-size:16px;font-weight:bold;}@media print{body{padding:0;}}</style></head><body>
   <div class="center"><div style="font-size:16px;font-weight:bold">${cfg.businessName||'Mi Negocio'}</div>
@@ -3891,6 +3892,21 @@ let barcodeBuffer = '';
 let barcodeTimer = null;
 let lastKeyTime = 0;
 const BARCODE_SPEED_THRESHOLD = 50; // ms entre teclas para detectar pistola
+
+// ═══ TECLADO FÍSICO PARA NUMPAD DE PESO ═══
+function initWeightKeyboard(){
+  document.addEventListener('keydown', e => {
+    const overlay = document.getElementById('weightOverlay');
+    if(!overlay || !overlay.classList.contains('open')) return;
+    // Prevent barcode scanner from interfering
+    e.stopPropagation();
+    if(e.key >= '0' && e.key <= '9'){ wpKey(e.key); e.preventDefault(); }
+    else if(e.key === '.' || e.key === ','){ wpKey('.'); e.preventDefault(); }
+    else if(e.key === 'Backspace' || e.key === 'Delete'){ wpKey('del'); e.preventDefault(); }
+    else if(e.key === 'Enter'){ confirmWeight(); e.preventDefault(); }
+    else if(e.key === 'Escape'){ closeWeightPicker(); e.preventDefault(); }
+  }, true); // capture phase — runs before barcode listener
+}
 
 function initBarcodeListener(){
   document.addEventListener('keydown', e=>{
@@ -4678,6 +4694,34 @@ function incrementDemoVentas(){}
 
 function showDemoBanner(){}
 
+
+// ═══ AGENTE IA — EN CONSTRUCCIÓN ═══
+function renderAgente(){
+  document.getElementById('content').innerHTML = `
+    <div style="min-height:60vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 24px;">
+      <div style="background:linear-gradient(135deg,rgba(167,139,250,0.12),rgba(14,165,233,0.06));border:1.5px solid rgba(167,139,250,0.3);border-radius:20px;padding:52px 48px;max-width:520px;width:100%;">
+        <div style="font-size:52px;margin-bottom:16px;">🤖</div>
+        <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.35);border-radius:20px;padding:5px 14px;margin-bottom:20px;">
+          <div style="width:7px;height:7px;background:#a78bfa;border-radius:50%;animation:pulse 2s ease infinite;"></div>
+          <span style="font-size:11px;font-weight:700;color:#a78bfa;font-family:var(--mono);letter-spacing:0.1em;text-transform:uppercase;">En desarrollo</span>
+        </div>
+        <div style="font-family:var(--head);font-size:28px;font-weight:800;letter-spacing:-1px;margin-bottom:12px;">Agente IA <span style="color:#a78bfa;">— Próximamente</span></div>
+        <div style="font-size:15px;color:var(--muted);line-height:1.7;margin-bottom:32px;">
+          Estamos construyendo tu asistente de inteligencia artificial. Analizará tu negocio, detectará oportunidades y te dará recomendaciones en tiempo real.
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;text-align:left;margin-bottom:32px;">
+          ${['Panel de análisis automático — insights al abrir','Detecta productos con bajo margen y sugiere ajustes','Chat IA para preguntar sobre tu negocio','Lectura de facturas de proveedores por foto','Alertas inteligentes de reposición'].map(f=>`
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(167,139,250,0.07);border-radius:10px;border:1px solid rgba(167,139,250,0.15);">
+              <span style="color:#a78bfa;font-size:14px;">✦</span>
+              <span style="font-size:13px;color:var(--muted);">${f}</span>
+            </div>`).join('')}
+        </div>
+        <div style="font-size:12px;color:var(--muted);font-family:var(--mono);">Disponible en el plan <span style="color:#a78bfa;font-weight:700;">Merka POS + Agente IA</span></div>
+      </div>
+    </div>
+  `;
+}
+
 // ═══ INIT ═══
 async function init(){
   initSampleData();
@@ -4694,6 +4738,7 @@ async function init(){
     DB.load('proveedores'),DB.load('pagar')
   ]).catch(()=>{});
   initBarcodeListener();
+  initWeightKeyboard();
   updateLogoElements();
   // Always show login screen — never auto-enter
   // Always show layer 1 auth first
