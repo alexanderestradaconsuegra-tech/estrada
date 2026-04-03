@@ -4696,30 +4696,226 @@ function showDemoBanner(){}
 
 
 // ═══ AGENTE IA — EN CONSTRUCCIÓN ═══
+// ═══ AGENTE IA ═══
+let agenteChatHistory = [];
+const AGENTE_ENDPOINT = N8N + '/merka-agente';
+
 function renderAgente(){
   document.getElementById('content').innerHTML = `
-    <div style="min-height:60vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 24px;">
-      <div style="background:linear-gradient(135deg,rgba(167,139,250,0.12),rgba(14,165,233,0.06));border:1.5px solid rgba(167,139,250,0.3);border-radius:20px;padding:52px 48px;max-width:520px;width:100%;">
-        <div style="font-size:52px;margin-bottom:16px;">🤖</div>
-        <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.35);border-radius:20px;padding:5px 14px;margin-bottom:20px;">
-          <div style="width:7px;height:7px;background:#a78bfa;border-radius:50%;animation:pulse 2s ease infinite;"></div>
-          <span style="font-size:11px;font-weight:700;color:#a78bfa;font-family:var(--mono);letter-spacing:0.1em;text-transform:uppercase;">En desarrollo</span>
+    <div style="display:flex;flex-direction:column;height:calc(100vh - 53px);overflow:hidden;">
+
+      <!-- Header -->
+      <div style="padding:16px 20px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:12px;flex-shrink:0;">
+        <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#7c3aed,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:18px;">✦</div>
+        <div>
+          <div style="font-family:var(--head);font-size:16px;font-weight:700;letter-spacing:-0.3px;">Agente IA</div>
+          <div style="font-size:11px;color:#a78bfa;font-family:var(--mono);">Analiza tu negocio en tiempo real</div>
         </div>
-        <div style="font-family:var(--head);font-size:28px;font-weight:800;letter-spacing:-1px;margin-bottom:12px;">Agente IA <span style="color:#a78bfa;">— Próximamente</span></div>
-        <div style="font-size:15px;color:var(--muted);line-height:1.7;margin-bottom:32px;">
-          Estamos construyendo tu asistente de inteligencia artificial. Analizará tu negocio, detectará oportunidades y te dará recomendaciones en tiempo real.
+        <button onclick="loadAgenteInsights()" style="margin-left:auto;padding:7px 14px;background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.3);border-radius:8px;color:#a78bfa;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--mono);">↻ Actualizar</button>
+      </div>
+
+      <!-- Insights panel -->
+      <div id="agente-insights" style="padding:16px 20px;border-bottom:1px solid var(--bdr);flex-shrink:0;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;" id="insights-grid">
+          <div style="padding:14px;background:var(--sur);border:1px solid var(--bdr);border-radius:12px;text-align:center;color:var(--muted);font-size:13px;">Cargando análisis...</div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:10px;text-align:left;margin-bottom:32px;">
-          ${['Panel de análisis automático — insights al abrir','Detecta productos con bajo margen y sugiere ajustes','Chat IA para preguntar sobre tu negocio','Lectura de facturas de proveedores por foto','Alertas inteligentes de reposición'].map(f=>`
-            <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(167,139,250,0.07);border-radius:10px;border:1px solid rgba(167,139,250,0.15);">
-              <span style="color:#a78bfa;font-size:14px;">✦</span>
-              <span style="font-size:13px;color:var(--muted);">${f}</span>
-            </div>`).join('')}
+      </div>
+
+      <!-- Chat messages -->
+      <div id="agente-messages" style="flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px;">
+        <div style="text-align:center;padding:20px 0;">
+          <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">Puedes preguntarme cualquier cosa sobre tu negocio</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;" id="sugerencias-wrap">
+            ${['¿Qué producto me da más ganancia?','¿Cuánto vendí esta semana?','¿Qué clientes me deben más?','¿Qué productos están por agotarse?'].map(s=>`
+              <button onclick="agenteEnviarSugerencia('${s}')" style="padding:7px 14px;background:var(--sur);border:1px solid var(--bdr);border-radius:20px;color:var(--muted);font-size:12px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.borderColor='rgba(167,139,250,0.5)';this.style.color='#a78bfa'" onmouseout="this.style.borderColor='var(--bdr)';this.style.color='var(--muted)'">${s}</button>`).join('')}
+          </div>
         </div>
-        <div style="font-size:12px;color:var(--muted);font-family:var(--mono);">Disponible en el plan <span style="color:#a78bfa;font-weight:700;">Merka POS + Agente IA</span></div>
+      </div>
+
+      <!-- Input -->
+      <div style="padding:12px 20px;border-top:1px solid var(--bdr);display:flex;gap:10px;flex-shrink:0;background:var(--bg);">
+        <input id="agente-input" placeholder="Pregunta algo sobre tu negocio..."
+          style="flex:1;padding:11px 16px;background:var(--sur);border:1.5px solid var(--bdr);border-radius:10px;color:var(--text);font-size:14px;font-family:var(--body);outline:none;transition:border-color 0.2s;"
+          onfocus="this.style.borderColor='rgba(167,139,250,0.5)'"
+          onblur="this.style.borderColor='var(--bdr)'"
+          onkeydown="if(event.key==='Enter')agenteEnviar()">
+        <button onclick="agenteEnviar()" id="agente-btn"
+          style="padding:11px 18px;background:linear-gradient(135deg,#7c3aed,#a78bfa);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;transition:opacity 0.2s;">
+          Enviar
+        </button>
       </div>
     </div>
   `;
+
+  loadAgenteInsights();
+}
+
+function agenteAddMessage(role, text){
+  const el = document.getElementById('agente-messages');
+  const isUser = role === 'user';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;${isUser?'justify-content:flex-end':'justify-content:flex-start'}`;
+  div.innerHTML = `
+    <div style="max-width:75%;padding:12px 16px;border-radius:${isUser?'14px 14px 4px 14px':'14px 14px 14px 4px'};
+      background:${isUser?'linear-gradient(135deg,#7c3aed,#a78bfa)':'var(--sur)'};
+      border:${isUser?'none':'1px solid var(--bdr)'};
+      color:${isUser?'#fff':'var(--text)'};font-size:14px;line-height:1.6;white-space:pre-wrap;">
+      ${text}
+    </div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+function agenteEnviarSugerencia(texto){
+  document.getElementById('sugerencias-wrap')?.remove();
+  document.getElementById('agente-input').value = texto;
+  agenteEnviar();
+}
+
+async function agenteEnviar(){
+  const input = document.getElementById('agente-input');
+  const btn = document.getElementById('agente-btn');
+  const texto = input.value.trim();
+  if(!texto) return;
+
+  // Remove suggestions
+  document.getElementById('sugerencias-wrap')?.remove();
+
+  input.value = '';
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  agenteAddMessage('user', texto);
+  agenteChatHistory.push({role:'user', content: texto});
+
+  // Typing indicator
+  const typing = document.createElement('div');
+  typing.id = 'agente-typing';
+  typing.style.cssText = 'display:flex;justify-content:flex-start';
+  typing.innerHTML = `<div style="padding:12px 16px;background:var(--sur);border:1px solid var(--bdr);border-radius:14px 14px 14px 4px;color:var(--muted);font-size:13px;">✦ Analizando...</div>`;
+  document.getElementById('agente-messages').appendChild(typing);
+  document.getElementById('agente-messages').scrollTop = 99999;
+
+  try {
+    // Build business context from local data
+    const ventas = DB.get('ventas') || [];
+    const productos = DB.get('productos') || [];
+    const clientes = DB.get('clientes') || [];
+    const cobrar = DB.get('cobrar') || [];
+    const gastos = DB.get('gastos') || [];
+
+    const hoy = new Date().toISOString().slice(0,10);
+    const ventasHoy = ventas.filter(v=>v.fecha===hoy);
+    const totalHoy = ventasHoy.reduce((s,v)=>s+v.total,0);
+    const stockBajo = productos.filter(p=>parseFloat(p.stock)<3);
+    const deudaTotal = cobrar.filter(c=>c.pagado<c.monto).reduce((s,c)=>s+(c.monto-c.pagado),0);
+    const productosConMargen = productos.map(p=>({
+      nombre:p.nombre,
+      margen:p.precioCompra>0?Math.round(((p.precioVenta-p.precioCompra)/p.precioCompra)*100):0,
+      stock:p.stock
+    })).sort((a,b)=>a.margen-b.margen);
+
+    const contexto = `Eres el asistente de análisis de negocio de Merka POS. Responde en español de forma concisa y directa. Usa datos reales cuando estén disponibles.
+
+DATOS DEL NEGOCIO (${new Date().toLocaleDateString('es-CL')}):
+- Ventas hoy: ${ventasHoy.length} ventas · $${fmt(totalHoy)}
+- Total ventas registradas: ${ventas.length}
+- Productos en inventario: ${productos.length}
+- Productos con stock crítico (<3 unidades): ${stockBajo.map(p=>p.nombre).join(', ')||'ninguno'}
+- Clientes registrados: ${clientes.length}
+- Deuda total por cobrar: $${fmt(deudaTotal)}
+- Productos con menor margen: ${productosConMargen.slice(0,3).map(p=>`${p.nombre} (${p.margen}%)`).join(', ')||'sin datos'}
+- Productos con mayor margen: ${productosConMargen.slice(-3).reverse().map(p=>`${p.nombre} (${p.margen}%)`).join(', ')||'sin datos'}`;
+
+    const res = await fetch(AGENTE_ENDPOINT, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        org_id: getOrgId(),
+        mensaje: texto,
+        historial: agenteChatHistory.slice(-6),
+        contexto
+      })
+    });
+
+    const data = await res.json();
+    const respuesta = data?.respuesta || data?.message || data?.content || 'No pude procesar la consulta.';
+
+    document.getElementById('agente-typing')?.remove();
+    agenteAddMessage('assistant', respuesta);
+    agenteChatHistory.push({role:'assistant', content: respuesta});
+
+  } catch(e) {
+    document.getElementById('agente-typing')?.remove();
+    agenteAddMessage('assistant', 'Error al conectar con el agente. Verifica tu conexión.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Enviar';
+    input.focus();
+  }
+}
+
+async function loadAgenteInsights(){
+  const grid = document.getElementById('insights-grid');
+  if(!grid) return;
+  grid.innerHTML = '<div style="padding:14px;background:var(--sur);border:1px solid var(--bdr);border-radius:12px;text-align:center;color:var(--muted);font-size:13px;grid-column:1/-1;">Calculando insights...</div>';
+
+  const ventas = DB.get('ventas') || [];
+  const productos = DB.get('productos') || [];
+  const cobrar = DB.get('cobrar') || [];
+  const gastos = DB.get('gastos') || [];
+
+  const hoy = new Date().toISOString().slice(0,10);
+  const ayer = new Date(Date.now()-86400000).toISOString().slice(0,10);
+  const ventasHoy = ventas.filter(v=>v.fecha===hoy);
+  const ventasAyer = ventas.filter(v=>v.fecha===ayer);
+  const totalHoy = ventasHoy.reduce((s,v)=>s+v.total,0);
+  const totalAyer = ventasAyer.reduce((s,v)=>s+v.total,0);
+  const diff = totalAyer>0?Math.round(((totalHoy-totalAyer)/totalAyer)*100):0;
+  const stockCritico = productos.filter(p=>parseFloat(p.stock)<3).length;
+  const deudaTotal = cobrar.filter(c=>c.pagado<c.monto).reduce((s,c)=>s+(c.monto-c.pagado),0);
+
+  // Top producto
+  const ventasPorProducto = {};
+  ventas.forEach(v=>(v.items||[]).forEach(it=>{
+    ventasPorProducto[it.nombre] = (ventasPorProducto[it.nombre]||0) + it.subtotal;
+  }));
+  const topProducto = Object.entries(ventasPorProducto).sort((a,b)=>b[1]-a[1])[0];
+
+  const insights = [
+    {
+      icon:'📈', label:'Ventas hoy',
+      value: fmt(totalHoy),
+      sub: diff===0?'Sin comparativa':diff>0?`+${diff}% vs ayer`:`${diff}% vs ayer`,
+      color: diff>=0?'var(--green)':'var(--red)'
+    },
+    {
+      icon:'⚠️', label:'Stock crítico',
+      value: stockCritico + ' productos',
+      sub: stockCritico>0?'Requieren reposición':'Todo en orden',
+      color: stockCritico>0?'var(--yellow)':'var(--green)'
+    },
+    {
+      icon:'💳', label:'Por cobrar',
+      value: fmt(deudaTotal),
+      sub: cobrar.filter(c=>c.pagado<c.monto).length + ' cuentas pendientes',
+      color: deudaTotal>0?'#a78bfa':'var(--green)'
+    },
+    {
+      icon:'🏆', label:'Top producto',
+      value: topProducto?topProducto[0].split(' ').slice(0,2).join(' '):'Sin datos',
+      sub: topProducto?fmt(topProducto[1])+' en ventas':'Registra ventas para ver',
+      color:'var(--acc)'
+    }
+  ];
+
+  grid.innerHTML = insights.map(i=>`
+    <div style="padding:14px 16px;background:var(--sur);border:1px solid var(--bdr);border-radius:12px;">
+      <div style="font-size:20px;margin-bottom:6px;">${i.icon}</div>
+      <div style="font-size:11px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">${i.label}</div>
+      <div style="font-size:18px;font-weight:700;font-family:var(--head);letter-spacing:-0.5px;margin-bottom:3px;">${i.value}</div>
+      <div style="font-size:11px;color:${i.color};font-weight:600;">${i.sub}</div>
+    </div>`).join('');
 }
 
 // ═══ INIT ═══
