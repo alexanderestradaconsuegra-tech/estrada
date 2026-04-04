@@ -1006,7 +1006,7 @@ select option{background:var(--sur);}
       <div class="nav-item" onclick="showPage('cierre')"><span class="nav-ic">⬫</span>Cierre de Caja</div>
       <div class="nav-section">Análisis</div>
       <div class="nav-item" onclick="showPage('reportes')"><span class="nav-ic">◈</span>Reportes</div>
-      <div class="nav-item" onclick="showPage('agente')" style="color:#a78bfa;"><span class="nav-ic">✦</span>Agente IA</div>
+      <div class="nav-item" onclick="showPage('agente')" style="color:#a78bfa;" id="nav-agente"><span class="nav-ic">✦</span>Agente IA</div>
       <div class="nav-section" data-desktop-only="1">Sistema</div>
       <div class="nav-item" data-desktop-only="1" onclick="showPage('auditoria')" id="nav-auditoria"><span class="nav-ic">◷</span>Auditoría</div>
       <div class="nav-item" data-desktop-only="1" onclick="showPage('configuracion')"><span class="nav-ic">⊞</span>Configuración</div>
@@ -3690,7 +3690,7 @@ async function authLogin(){
     const resData = res?.data || res;
     if(resData && (resData.found === true || resData.org_id)){
       const negocio = resData;
-      // Clear all cached data from previous org
+      // Clear previous org cache if different org
       const prevOrg = localStorage.getItem('merka_org_id');
       if(prevOrg !== orgId){
         ['productos','clientes','ventas','cobrar','cierres','gastos','proveedores','pagar','usuarios','config','aperturas','recepciones','auditlog'].forEach(k=>{
@@ -3703,6 +3703,7 @@ async function authLogin(){
       localStorage.removeItem('merka_demo_mode');
       localStorage.removeItem('merka_demo_ventas');
       if(negocio.demo_start) localStorage.setItem('merka_demo_start', negocio.demo_start);
+      localStorage.setItem('merka_plan', negocio.plan || 'trial');
       await DB.load('usuarios');
       await DB.load('config');
       updateLogoElements();
@@ -3786,6 +3787,75 @@ async function createFirstAdmin(){
   startPolling();
   showToast(`¡Bienvenido, ${nombre}! 7 días de prueba gratuita.`, 'success');
 }
+
+
+// ═══ TRIAL CHECK ═══
+function checkTrialStatus(){
+  if(isDemoMode()) return true;
+  const plan = localStorage.getItem('merka_plan') || 'trial';
+  const demoStart = localStorage.getItem('merka_demo_start');
+  if(plan === 'pro' || plan === 'pro-ia') return true;
+  if(!demoStart) return true;
+  const diasTranscurridos = Math.floor((Date.now() - new Date(demoStart).getTime()) / (1000*60*60*24));
+  if(diasTranscurridos >= 8){
+    showTrialExpired();
+    return false;
+  }
+  // Show trial banner
+  const diasRestantes = 7 - diasTranscurridos;
+  showTrialBanner(diasRestantes);
+  return true;
+}
+
+function showTrialBanner(dias){
+  const banner = document.getElementById('demo-banner');
+  if(!banner) return;
+  banner.style.display = 'flex';
+  banner.style.background = dias <= 2 ? 'rgba(220,38,38,0.08)' : 'rgba(14,165,233,0.06)';
+  banner.style.borderBottom = dias <= 2 ? '1px solid rgba(220,38,38,0.2)' : '1px solid rgba(14,165,233,0.1)';
+  banner.innerHTML = `
+    <span style="font-size:12px;font-weight:600;color:${dias<=2?'var(--red)':'var(--muted)'}">
+      ⏱ Período de prueba — <strong style="color:${dias<=2?'var(--red)':'var(--text)'}">${dias} día${dias!==1?'s':''} restante${dias!==1?'s':''}</strong>
+    </span>
+    <a href="https://merkapos.pro#pricing" target="_blank"
+      style="font-size:11px;color:var(--acc);font-weight:700;text-decoration:none;margin-left:16px;">
+      Activar plan →
+    </a>`;
+}
+
+function showTrialExpired(){
+  // Hide app, show block screen
+  document.getElementById('app').classList.add('hidden');
+  let block = document.getElementById('trial-block');
+  if(!block){
+    block = document.createElement('div');
+    block.id = 'trial-block';
+    block.style.cssText = 'position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9998;padding:24px;';
+    block.innerHTML = `
+      <div style="text-align:center;max-width:440px;">
+        <div style="font-size:56px;margin-bottom:16px;">⏰</div>
+        <div style="font-family:var(--head);font-size:28px;font-weight:800;letter-spacing:-1px;margin-bottom:10px;">Tu prueba gratuita terminó</div>
+        <div style="font-size:15px;color:var(--muted);line-height:1.7;margin-bottom:32px;">
+          Tus datos están seguros. Activa tu plan para seguir usando el sistema sin perder nada.
+        </div>
+        <a href="https://merkapos.pro#pricing" target="_blank"
+          style="display:block;padding:16px;border-radius:12px;background:linear-gradient(135deg,var(--lime3),var(--lime2));color:#000;font-size:16px;font-weight:800;text-decoration:none;margin-bottom:12px;">
+          ⚡ Ver planes y activar →
+        </a>
+        <button onclick="doLogout()" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;text-decoration:underline;">
+          Cerrar sesión
+        </button>
+      </div>`;
+    document.body.appendChild(block);
+  }
+  block.style.display = 'flex';
+}
+
+function isProIaPlan(){
+  const plan = localStorage.getItem('merka_plan') || 'trial';
+  return plan === 'pro-ia';
+}
+
 
 // ═══ DEMO BANNER — removed ═══
 function checkDemo(){}
