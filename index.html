@@ -1006,6 +1006,7 @@ select option{background:var(--sur);}
       <div class="nav-item" onclick="showPage('cierre')"><span class="nav-ic">⬫</span>Cierre de Caja</div>
       <div class="nav-section">Análisis</div>
       <div class="nav-item" onclick="showPage('reportes')"><span class="nav-ic">◈</span>Reportes</div>
+      <div class="nav-item" onclick="openExportModal()" style="color:var(--muted);"><span class="nav-ic">📥</span>Exportar / Importar</div>
       <div class="nav-item" onclick="showPage('agente')" style="color:#a78bfa;" id="nav-agente"><span class="nav-ic">✦</span>Agente IA</div>
       <div class="nav-section" data-desktop-only="1">Sistema</div>
       <div class="nav-item" data-desktop-only="1" onclick="showPage('auditoria')" id="nav-auditoria"><span class="nav-ic">◷</span>Auditoría</div>
@@ -1054,11 +1055,7 @@ select option{background:var(--sur);}
     </button>
   </div>
 
-  <!-- DEMO BANNER -->
-  <div id="demo-banner" style="display:none!important;align-items:center;justify-content:center;
-    padding:8px 20px;background:rgba(14,165,233,0.08);border-bottom:1px solid rgba(14,165,233,0.15);
-    position:sticky;top:0;z-index:50;">
-  </div>
+
   <!-- MAIN -->
   <div class="main">
     <div class="topbar" id="mainTopbar">
@@ -1158,8 +1155,6 @@ const API = {
     try {
       // Don't override org_id for auth calls — it comes from user input
       const isAuth = endpoint.includes('merka-auth') || endpoint.includes('merka-admin');
-      // Skip all API calls in demo mode (except auth)
-      if(!isAuth && isDemoMode()) return null;
       const payload = isAuth ? body : { ...body, org_id: getOrgId() };
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -2151,7 +2146,6 @@ function addVolRow(){
   document.getElementById('vol-list').appendChild(div);
 }
 function saveProducto(id, isEdit){
-  if(isDemoMode()){ showToast('Inventario bloqueado en modo demo','error'); return; }
   if(!checkPerm('editarInventario','No tienes permiso para modificar el inventario.')) return;
   const vols = [...document.querySelectorAll('#vol-list .vol-row')].map(r=>({
     desde:parseInt(r.querySelector('.vol-desde').value)||0,
@@ -3662,29 +3656,6 @@ async function authLogin(){
   if(btn){ btn.textContent='Verificando...'; btn.disabled=true; }
   if(errEl) errEl.textContent='';
 
-  // ── DEMO MODE: admin / 1234 — entra directo ──
-  if(orgId === 'admin' && pass === '1234'){
-    localStorage.setItem('merka_org_id', 'demo-mode');
-    localStorage.setItem('merka_demo_mode', 'true');
-    localStorage.setItem('merka_demo_ventas', '0');
-    const demoAdmin = {id:1,nombre:'Administrador Demo',rol:'Administrador',pin:'',activo:true,
-      permisos:{verCostos:true,editarInventario:false,eliminarVentas:false,verReportes:true,verGastos:false,gestionarUsuarios:false,abrirCaja:true}};
-    DB.set('usuarios',[demoAdmin]);
-    DB.set('config',{businessName:'Demo — Merka POS',rut:'',direccion:'',telefono:'',logo:'',whatsapp:''});
-    // Auto-login as demo admin — skip user selection
-    session = {id:demoAdmin.id, nombre:demoAdmin.nombre, rol:demoAdmin.rol};
-    localStorage.setItem('merka_session', JSON.stringify(session));
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('app').classList.remove('hidden');
-    updateSessionUI();
-    updateLogoElements();
-    showPage('terminal');
-    startPolling();
-
-    if(btn){ btn.textContent='Acceder →'; btn.disabled=false; }
-    return;
-  }
-
   try {
     const res = await API.call(ENDPOINTS.auth, {action:'login', org_id: orgId, password: pass});
     const resData = res?.data || res;
@@ -4671,13 +4642,6 @@ async function syncAll(showFeedback=false){
   setSyncState('syncing');
   try {
     let anyFailed = false;
-    // Skip sync in demo mode — no real data
-    if(isDemoMode()){
-      setSyncState('ok');
-      _lastSync = Date.now();
-      _syncPending = false;
-      return;
-    }
     await Promise.all(SYNC_MODULES.map(async m => {
       try {
         const data = await API.getAll(m);
