@@ -2399,6 +2399,9 @@ function renderCobrar(){
   const totalDeuda = cobrar.reduce((s,c)=>s+c.monto,0);
   const totalPagado = cobrar.reduce((s,c)=>s+c.pagado,0);
   const totalPendiente = totalDeuda-totalPagado;
+  const recepciones = DB.get('recepciones')||[];
+  const proveedores = DB.get('proveedores')||[];
+  const pagar = DB.get('pagar')||[];
   const recepciones_con_factura = recepciones.length ? `
     <div class="section-card" style="margin-top:16px;">
       <div class="card-header"><div><div class="card-title">Historial de recepciones</div><div class="card-sub">${recepciones.length} facturas recibidas</div></div></div>
@@ -3719,12 +3722,12 @@ async function createFirstAdmin(){
   if(!nombre) return showToast('Ingresa tu nombre','error');
   if(!pin || pin.length < 4) return showToast('PIN debe tener al menos 4 dígitos','error');
 
-  // Generate org_id from business name
-  const orgId = (negocio||nombre).toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g,'')
-    .replace(/[^a-z0-9]/g,'-').replace(/-+/g,'-')
-    .slice(0,30) + '-' + Date.now().toString().slice(-4);
-  localStorage.setItem('merka_org_id', orgId);
+  // CRITICO: usar org_id del login, NO generar uno nuevo
+  const orgId = localStorage.getItem('merka_org_id');
+  if(!orgId || orgId === 'default'){
+    showToast('Error: sesion invalida. Vuelve a ingresar.','error');
+    return;
+  }
 
   // Create admin user
   const admin = {
@@ -4646,8 +4649,9 @@ async function syncAll(showFeedback=false){
       try {
         const data = await API.getAll(m);
         if(data && Array.isArray(data)){
-          CACHE[m] = data;
-          localStorage.setItem('merka_'+m, JSON.stringify(data));
+          const normalized = data.map(r => normalizeRecord(m, r));
+          CACHE[m] = normalized;
+          localStorage.setItem('merka_'+m, JSON.stringify(normalized));
         }
       } catch(e){ anyFailed = true; }
     }));
