@@ -1227,7 +1227,7 @@ function normalizeRecord(table, r){
     id: r.id, nombre: r.nombre, sku: r.sku,
     precioCompra: r.precio_compra ?? r.precioCompra ?? 0,
     precioVenta:  r.precio_venta  ?? r.precioVenta  ?? 0,
-    stock: parseFloat(r.stock || 0),
+    stock: parseFloat(String(r.stock || 0).replace(/,/g, '.')) || 0,
     unidad: r.unidad, categoria: r.categoria,
     venderPorPeso: r.vender_por_peso ?? r.venderPorPeso ?? false,
     volumen: typeof r.volumen === 'string' ? JSON.parse(r.volumen||'[]') : (r.volumen||[])
@@ -1305,7 +1305,7 @@ function showPage(page){
 
 // ═══ LOGIN ═══
 function renderLoginCashiers(targetId, onSelect){
-  const usuarios = DB.get('usuarios');
+  const usuarios = CACHE['usuarios'] || DB.get('usuarios');
   const el = document.getElementById(targetId);
   el.innerHTML = usuarios.map(u=>`
     <button class="cashier-btn" id="cb-${targetId}-${u.id}" onclick="${onSelect}(${u.id})">
@@ -1626,7 +1626,7 @@ function renderTerminalProducts(){
     return;
   }
   grid.innerHTML = filtered.map(p=>{
-    const sinStock = p.stock===0||p.stock<=0;
+    const sinStock = !p.stock || parseFloat(p.stock) <= 0;
     const esPeso = !!p.venderPorPeso;
     const stockLabel = sinStock ? 'Sin stock' : (esPeso ? (parseFloat(p.stock).toFixed(2)+' kg disp.') : (p.stock+' '+p.unidad));
     const priceLabel = esPeso ? fmt(p.precioVenta)+'/kg' : fmt(p.precioVenta);
@@ -3686,8 +3686,9 @@ async function authLogin(){
       updateLogoElements();
       document.getElementById('login-layer1').style.display = 'none';
       document.getElementById('login-layer2').style.display = 'block';
-      const usuarios = DB.get('usuarios').filter(u=>u.activo!==false);
-      if(usuarios.length === 0){
+      const usuariosRaw = DB.get('usuarios').filter(u=>u.activo!==false);
+      // Si no hay usuarios en cache, esperar un momento y reintentar
+      if(usuariosRaw.length === 0){
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('setupScreen').style.display = 'flex';
       } else {
