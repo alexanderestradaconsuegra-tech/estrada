@@ -1133,8 +1133,8 @@ const N8N = 'https://n8n-n8n.fa2cjf.easypanel.host/webhook';
 // ═══ ORG_ID — Identificador único de este negocio ═══
 // Cambiar este valor por un ID único para cada cliente
 // Ejemplo: 'negocio-juan-2026' o 'minimarket-santiago-001'
-let ORG_ID = localStorage.getItem('merka_org_id') || 'default';
-function getOrgId(){ return localStorage.getItem('merka_org_id') || 'default'; }
+let ORG_ID = sessionStorage.getItem('merka_org_id') || 'default';
+function getOrgId(){ return sessionStorage.getItem('merka_org_id') || 'default'; }
 
 const ENDPOINTS = {
   productos:     N8N + '/merka-productos',
@@ -1183,8 +1183,8 @@ const API = {
 
 const CACHE = {};
 const DB = {
-  get: k => CACHE[k] || JSON.parse(localStorage.getItem('merka_'+k)||'[]'),
-  set: (k,v) => { CACHE[k]=v; localStorage.setItem('merka_'+k, JSON.stringify(v)); },
+  get: k => CACHE[k] || [],
+  set: (k,v) => { CACHE[k]=v; },
   // Carga desde n8n, fallback a localStorage
   async load(k) {
     // configuracion tiene estructura especial
@@ -1194,7 +1194,6 @@ const DB = {
         if(res && res.datos){
           const cfg = typeof res.datos === 'string' ? JSON.parse(res.datos) : res.datos;
           CACHE['config'] = cfg;
-          localStorage.setItem('merka_config', JSON.stringify(cfg));
           return cfg;
         }
       } catch(e){ console.warn('Config load error:', e); }
@@ -1205,7 +1204,6 @@ const DB = {
       // Normalizar snake_case → camelCase para productos y cobrar
       const normalized = data.map(r => normalizeRecord(k, r));
       CACHE[k] = normalized;
-      localStorage.setItem('merka_'+k, JSON.stringify(normalized));
       return normalized;
     }
     return DB.get(k);
@@ -1264,7 +1262,7 @@ function normalizeRecord(table, r){
 }
 
 // ═══ SESSION ═══
-let session = JSON.parse(localStorage.getItem('merka_session')||'null');
+let session = JSON.parse(sessionStorage.getItem('merka_session')||'null');
 let loginSelectedUser = null;
 let switchSelectedUser = null;
 
@@ -1343,13 +1341,15 @@ function doLogin(){
     return;
   }
   session = { id: loginSelectedUser.id, nombre: loginSelectedUser.nombre, rol: loginSelectedUser.rol };
-  localStorage.setItem('merka_session', JSON.stringify(session));
+  sessionStorage.setItem('merka_session', JSON.stringify(session));
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').classList.remove('hidden');
   updateSessionUI();
   showPage('terminal');
   setTimeout(checkDemo, 1000);
   startPolling();
+  // Cargar todos los datos desde n8n al iniciar sesión
+  syncAll();
   setTimeout(initMobileNav, 100);
 }
 function openSwitchOverlay(){
@@ -1386,7 +1386,7 @@ function doSwitch(){
     return;
   }
   session = { id: switchSelectedUser.id, nombre: switchSelectedUser.nombre, rol: switchSelectedUser.rol };
-  localStorage.setItem('merka_session', JSON.stringify(session));
+  sessionStorage.setItem('merka_session', JSON.stringify(session));
   closeSwitchOverlay();
   updateSessionUI();
 }
@@ -1912,11 +1912,6 @@ function cobrarVenta(){
   closeCartMobile();
   tCart = [];
   tCliente = '';
-  // Recargar productos desde BD para tener stock real
-  setTimeout(async () => {
-    await DB.load('productos');
-    renderTerminalProducts();
-  }, 2200);
   const sc = document.getElementById('t-sale-count');
   if(sc) sc.textContent = DB.get('ventas').filter(v=>v.fecha===today()).length + ' ventas hoy';
   setTimeout(()=>{
@@ -2785,7 +2780,7 @@ function saveUsuario(id,isEdit){
   if(isEdit && session && session.id === u.id){
     session.nombre = u.nombre;
     session.rol = u.rol;
-    localStorage.setItem('merka_session', JSON.stringify(session));
+    sessionStorage.setItem('merka_session', JSON.stringify(session));
     updateSessionUI();
   }
 }
@@ -3671,19 +3666,19 @@ async function authLogin(){
     if(resData && (resData.found === true || resData.org_id)){
       const negocio = resData;
       // Clear previous org cache if different org
-      const prevOrg = localStorage.getItem('merka_org_id');
+      const prevOrg = sessionStorage.getItem('merka_org_id');
       if(prevOrg !== orgId){
         ['productos','clientes','ventas','cobrar','cierres','gastos','proveedores','pagar','usuarios','config','aperturas','recepciones','auditlog'].forEach(k=>{
-          localStorage.removeItem('merka_'+k);
+          delete CACHE[k];
           delete CACHE[k];
         });
       }
-      localStorage.setItem('merka_org_id', orgId);
+      sessionStorage.setItem('merka_org_id', orgId);
       ORG_ID = orgId;
-      localStorage.removeItem('merka_demo_mode');
-      localStorage.removeItem('merka_demo_ventas');
-      if(negocio.demo_start) localStorage.setItem('merka_demo_start', negocio.demo_start);
-      localStorage.setItem('merka_plan', negocio.plan || 'trial');
+      sessionStorage.removeItem('merka_demo_mode');
+      sessionStorage.removeItem('merka_demo_ventas');
+      if(negocio.demo_start) sessionStorage.setItem('merka_demo_start', negocio.demo_start);
+      sessionStorage.setItem('merka_plan', negocio.plan || 'trial');
       await DB.load('usuarios');
       await DB.load('config');
       updateLogoElements();
@@ -3716,7 +3711,7 @@ function backToLayer1(){
   document.getElementById('login-layer1').style.display = 'block';
   document.getElementById('login-layer2').style.display = 'none';
   document.getElementById('loginCashierList').innerHTML = '';
-  localStorage.removeItem('merka_org_id');
+  sessionStorage.removeItem('merka_org_id');
 }
 
 
@@ -3729,7 +3724,7 @@ async function createFirstAdmin(){
   if(!pin || pin.length < 4) return showToast('PIN debe tener al menos 4 dígitos','error');
 
   // CRITICO: usar org_id del login, NO generar uno nuevo
-  const orgId = localStorage.getItem('merka_org_id');
+  const orgId = sessionStorage.getItem('merka_org_id');
   if(!orgId || orgId === 'default'){
     showToast('Error: sesion invalida. Vuelve a ingresar.','error');
     return;
@@ -3754,11 +3749,11 @@ async function createFirstAdmin(){
   await API.call(ENDPOINTS.configuracion, {action:'save', data: cfg}).catch(()=>{});
 
   // Set demo start date
-  localStorage.setItem('merka_demo_start', new Date().toISOString());
+  sessionStorage.setItem('merka_demo_start', new Date().toISOString());
 
   // Auto-login
   session = {id: admin.id, nombre: admin.nombre, rol: admin.rol};
-  localStorage.setItem('merka_session', JSON.stringify(session));
+  sessionStorage.setItem('merka_session', JSON.stringify(session));
   document.getElementById('setupScreen').style.display = 'none';
   document.getElementById('app').classList.remove('hidden');
   updateSessionUI();
@@ -3772,8 +3767,8 @@ async function createFirstAdmin(){
 // ═══ TRIAL CHECK ═══
 function checkTrialStatus(){
   if(isDemoMode()) return true;
-  const plan = localStorage.getItem('merka_plan') || 'trial';
-  const demoStart = localStorage.getItem('merka_demo_start');
+  const plan = sessionStorage.getItem('merka_plan') || 'trial';
+  const demoStart = sessionStorage.getItem('merka_demo_start');
   if(plan === 'pro' || plan === 'pro-ia') return true;
   if(!demoStart) return true;
   const diasTranscurridos = Math.floor((Date.now() - new Date(demoStart).getTime()) / (1000*60*60*24));
@@ -3832,7 +3827,7 @@ function showTrialExpired(){
 }
 
 function isProIaPlan(){
-  const plan = localStorage.getItem('merka_plan') || 'trial';
+  const plan = sessionStorage.getItem('merka_plan') || 'trial';
   return plan === 'pro-ia';
 }
 
@@ -4657,7 +4652,6 @@ async function syncAll(showFeedback=false){
         if(data && Array.isArray(data)){
           const normalized = data.map(r => normalizeRecord(m, r));
           CACHE[m] = normalized;
-          localStorage.setItem('merka_'+m, JSON.stringify(normalized));
         }
       } catch(e){ anyFailed = true; }
     }));
@@ -4711,10 +4705,10 @@ window.addEventListener('offline', ()=> setSyncState('offline'));
 function logoutSession(){
   if(!confirm('¿Cerrar sesión?')) return;
   session = null;
-  localStorage.removeItem('merka_session');
+  sessionStorage.removeItem('merka_session');
   // Stop polling
   if(_syncInterval) clearInterval(_syncInterval);
-  localStorage.removeItem('merka_org_id');
+  sessionStorage.removeItem('merka_org_id');
   document.getElementById('app').classList.add('hidden');
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('login-layer1').style.display = 'block';
@@ -4729,7 +4723,7 @@ function logoutSession(){
 
 // ═══ DEMO MODE RESTRICTIONS ═══
 function isDemoMode(){
-  return localStorage.getItem('merka_demo_mode') === 'true';
+  return sessionStorage.getItem('merka_demo_mode') === 'true';
 }
 
 function checkDemoVentaLimit(){ return true; }
@@ -5154,7 +5148,7 @@ async function init(){
   document.getElementById('topbarDate').textContent = todayLabel();
   updateLogoElements();
   // If org_id already stored, pre-fill
-  const storedOrg = localStorage.getItem('merka_org_id');
+  const storedOrg = sessionStorage.getItem('merka_org_id');
   if(storedOrg && document.getElementById('auth-orgid')){
     document.getElementById('auth-orgid').value = storedOrg;
     document.getElementById('auth-pass')?.focus();
