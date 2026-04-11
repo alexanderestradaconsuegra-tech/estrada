@@ -1912,6 +1912,11 @@ function cobrarVenta(){
   closeCartMobile();
   tCart = [];
   tCliente = '';
+  // Recargar productos desde BD para tener stock real
+  setTimeout(async () => {
+    await DB.load('productos');
+    renderTerminalProducts();
+  }, 2200);
   const sc = document.getElementById('t-sale-count');
   if(sc) sc.textContent = DB.get('ventas').filter(v=>v.fecha===today()).length + ' ventas hoy';
   setTimeout(()=>{
