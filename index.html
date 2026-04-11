@@ -1332,7 +1332,7 @@ function checkPin(){
   if(loginSelectedUser?.pin && val.length >= loginSelectedUser.pin.length)
     document.getElementById('loginBtn').disabled = false;
 }
-function doLogin(){
+async function doLogin(){
   if(!loginSelectedUser) return;
   const pinInput = document.getElementById('pinInput').value;
   if(loginSelectedUser.pin && pinInput !== loginSelectedUser.pin){
@@ -1345,11 +1345,11 @@ function doLogin(){
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').classList.remove('hidden');
   updateSessionUI();
+  startPolling();
+  // Cargar todos los datos desde n8n antes de mostrar el terminal
+  await syncAll();
   showPage('terminal');
   setTimeout(checkDemo, 1000);
-  startPolling();
-  // Cargar todos los datos desde n8n al iniciar sesión
-  syncAll();
   setTimeout(initMobileNav, 100);
 }
 function openSwitchOverlay(){
@@ -1904,17 +1904,9 @@ function cobrarVenta(){
   incrementDemoVentas();
 
   // Sync stock actualizado de cada producto afectado
-  const syncPromises = items.map(i=>{
+  items.forEach(i=>{
     const p = DB.get('productos').find(x=>x.id===i.productoId);
-    return p ? DB.sync('productos', p) : Promise.resolve();
-  });
-  // Esperar sync y recargar desde n8n para tener stock real en CACHE
-  Promise.all(syncPromises).then(async () => {
-    const frescos = await DB.load('productos');
-    if(frescos && frescos.length > 0){
-      CACHE['productos'] = frescos;
-    }
-    renderTerminalProducts();
+    if(p) DB.sync('productos', p);
   });
   showSuccessFlash(total, tMetodo, venta.id);
   closeCartMobile();
@@ -3689,6 +3681,8 @@ async function authLogin(){
       sessionStorage.setItem('merka_plan', negocio.plan || 'trial');
       await DB.load('usuarios');
       await DB.load('config');
+      await DB.load('productos');
+      await DB.load('clientes');
       updateLogoElements();
       document.getElementById('login-layer1').style.display = 'none';
       document.getElementById('login-layer2').style.display = 'block';
@@ -3766,8 +3760,10 @@ async function createFirstAdmin(){
   document.getElementById('app').classList.remove('hidden');
   updateSessionUI();
   updateLogoElements();
-  showPage('terminal');
   startPolling();
+  // Cargar todos los datos desde n8n antes de mostrar el terminal
+  await syncAll();
+  showPage('terminal');
   showToast(`¡Bienvenido, ${nombre}! 7 días de prueba gratuita.`, 'success');
 }
 
