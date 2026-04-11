@@ -1133,8 +1133,8 @@ const N8N = 'https://n8n-n8n.fa2cjf.easypanel.host/webhook';
 // ═══ ORG_ID — Identificador único de este negocio ═══
 // Cambiar este valor por un ID único para cada cliente
 // Ejemplo: 'negocio-juan-2026' o 'minimarket-santiago-001'
-let ORG_ID = sessionStorage.getItem('merka_org_id') || 'default';
-function getOrgId(){ return sessionStorage.getItem('merka_org_id') || 'default'; }
+let ORG_ID = localStorage.getItem('merka_org_id') || 'default';
+function getOrgId(){ return localStorage.getItem('merka_org_id') || 'default'; }
 
 const ENDPOINTS = {
   productos:     N8N + '/merka-productos',
@@ -1183,8 +1183,8 @@ const API = {
 
 const CACHE = {};
 const DB = {
-  get: k => CACHE[k] || [],
-  set: (k,v) => { CACHE[k]=v; },
+  get: k => CACHE[k] || JSON.parse(localStorage.getItem('merka_'+k)||'[]'),
+  set: (k,v) => { CACHE[k]=v; localStorage.setItem('merka_'+k, JSON.stringify(v)); },
   // Carga desde n8n, fallback a localStorage
   async load(k) {
     // configuracion tiene estructura especial
@@ -1194,6 +1194,7 @@ const DB = {
         if(res && res.datos){
           const cfg = typeof res.datos === 'string' ? JSON.parse(res.datos) : res.datos;
           CACHE['config'] = cfg;
+          localStorage.setItem('merka_config', JSON.stringify(cfg));
           return cfg;
         }
       } catch(e){ console.warn('Config load error:', e); }
@@ -1204,6 +1205,7 @@ const DB = {
       // Normalizar snake_case → camelCase para productos y cobrar
       const normalized = data.map(r => normalizeRecord(k, r));
       CACHE[k] = normalized;
+      localStorage.setItem('merka_'+k, JSON.stringify(normalized));
       return normalized;
     }
     return DB.get(k);
@@ -1227,7 +1229,7 @@ function normalizeRecord(table, r){
     id: r.id, nombre: r.nombre, sku: r.sku,
     precioCompra: r.precio_compra ?? r.precioCompra ?? 0,
     precioVenta:  r.precio_venta  ?? r.precioVenta  ?? 0,
-    stock: parseFloat(String(r.stock || 0).replace(/,/g, '.')) || 0,
+    stock: parseFloat(String(r.stock || 0).replace(/,/g, '').replace(/\.(?=\d{3})/g, '')) || 0,
     unidad: r.unidad, categoria: r.categoria,
     venderPorPeso: r.vender_por_peso ?? r.venderPorPeso ?? false,
     volumen: typeof r.volumen === 'string' ? JSON.parse(r.volumen||'[]') : (r.volumen||[])
@@ -1262,7 +1264,7 @@ function normalizeRecord(table, r){
 }
 
 // ═══ SESSION ═══
-let session = JSON.parse(sessionStorage.getItem('merka_session')||'null');
+let session = JSON.parse(localStorage.getItem('merka_session')||'null');
 let loginSelectedUser = null;
 let switchSelectedUser = null;
 
@@ -1305,7 +1307,7 @@ function showPage(page){
 
 // ═══ LOGIN ═══
 function renderLoginCashiers(targetId, onSelect){
-  const usuarios = CACHE['usuarios'] || DB.get('usuarios');
+  const usuarios = DB.get('usuarios');
   const el = document.getElementById(targetId);
   el.innerHTML = usuarios.map(u=>`
     <button class="cashier-btn" id="cb-${targetId}-${u.id}" onclick="${onSelect}(${u.id})">
@@ -1341,12 +1343,11 @@ async function doLogin(){
     return;
   }
   session = { id: loginSelectedUser.id, nombre: loginSelectedUser.nombre, rol: loginSelectedUser.rol };
-  sessionStorage.setItem('merka_session', JSON.stringify(session));
+  localStorage.setItem('merka_session', JSON.stringify(session));
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').classList.remove('hidden');
   updateSessionUI();
   startPolling();
-  // Cargar todos los datos desde n8n antes de mostrar el terminal
   await syncAll();
   showPage('terminal');
   setTimeout(checkDemo, 1000);
@@ -1386,7 +1387,7 @@ function doSwitch(){
     return;
   }
   session = { id: switchSelectedUser.id, nombre: switchSelectedUser.nombre, rol: switchSelectedUser.rol };
-  sessionStorage.setItem('merka_session', JSON.stringify(session));
+  localStorage.setItem('merka_session', JSON.stringify(session));
   closeSwitchOverlay();
   updateSessionUI();
 }
@@ -1398,7 +1399,6 @@ function updateSessionUI(){
   av.textContent = getInitials(session.nombre);
   av.className = 'session-avatar ' + getColor(session.id||0);
   document.getElementById('nav-usuarios').style.display = session.rol==='Administrador'?'flex':'none';
-  document.getElementById('nav-agente').style.display = isProIaPlan() ? 'flex' : 'none';
   updateLogoElements();
 }
 function updateLogoElements(){
@@ -2400,9 +2400,6 @@ function renderCobrar(){
   const totalDeuda = cobrar.reduce((s,c)=>s+c.monto,0);
   const totalPagado = cobrar.reduce((s,c)=>s+c.pagado,0);
   const totalPendiente = totalDeuda-totalPagado;
-  const recepciones = DB.get('recepciones')||[];
-  const proveedores = DB.get('proveedores')||[];
-  const pagar = DB.get('pagar')||[];
   const recepciones_con_factura = recepciones.length ? `
     <div class="section-card" style="margin-top:16px;">
       <div class="card-header"><div><div class="card-title">Historial de recepciones</div><div class="card-sub">${recepciones.length} facturas recibidas</div></div></div>
@@ -2780,7 +2777,7 @@ function saveUsuario(id,isEdit){
   if(isEdit && session && session.id === u.id){
     session.nombre = u.nombre;
     session.rol = u.rol;
-    sessionStorage.setItem('merka_session', JSON.stringify(session));
+    localStorage.setItem('merka_session', JSON.stringify(session));
     updateSessionUI();
   }
 }
@@ -3666,29 +3663,27 @@ async function authLogin(){
     if(resData && (resData.found === true || resData.org_id)){
       const negocio = resData;
       // Clear previous org cache if different org
-      const prevOrg = sessionStorage.getItem('merka_org_id');
+      const prevOrg = localStorage.getItem('merka_org_id');
       if(prevOrg !== orgId){
         ['productos','clientes','ventas','cobrar','cierres','gastos','proveedores','pagar','usuarios','config','aperturas','recepciones','auditlog'].forEach(k=>{
-          delete CACHE[k];
+          localStorage.removeItem('merka_'+k);
           delete CACHE[k];
         });
       }
-      sessionStorage.setItem('merka_org_id', orgId);
+      localStorage.setItem('merka_org_id', orgId);
       ORG_ID = orgId;
-      sessionStorage.removeItem('merka_demo_mode');
-      sessionStorage.removeItem('merka_demo_ventas');
-      if(negocio.demo_start) sessionStorage.setItem('merka_demo_start', negocio.demo_start);
-      sessionStorage.setItem('merka_plan', negocio.plan || 'trial');
+      localStorage.removeItem('merka_demo_mode');
+      localStorage.removeItem('merka_demo_ventas');
+      if(negocio.demo_start) localStorage.setItem('merka_demo_start', negocio.demo_start);
+      localStorage.setItem('merka_plan', negocio.plan || 'trial');
       await DB.load('usuarios');
       await DB.load('config');
       await DB.load('productos');
-      await DB.load('clientes');
       updateLogoElements();
       document.getElementById('login-layer1').style.display = 'none';
       document.getElementById('login-layer2').style.display = 'block';
-      const usuariosRaw = DB.get('usuarios').filter(u=>u.activo!==false);
-      // Si no hay usuarios en cache, esperar un momento y reintentar
-      if(usuariosRaw.length === 0){
+      const usuarios = DB.get('usuarios').filter(u=>u.activo!==false);
+      if(usuarios.length === 0){
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('setupScreen').style.display = 'flex';
       } else {
@@ -3714,7 +3709,7 @@ function backToLayer1(){
   document.getElementById('login-layer1').style.display = 'block';
   document.getElementById('login-layer2').style.display = 'none';
   document.getElementById('loginCashierList').innerHTML = '';
-  sessionStorage.removeItem('merka_org_id');
+  localStorage.removeItem('merka_org_id');
 }
 
 
@@ -3726,8 +3721,8 @@ async function createFirstAdmin(){
   if(!nombre) return showToast('Ingresa tu nombre','error');
   if(!pin || pin.length < 4) return showToast('PIN debe tener al menos 4 dígitos','error');
 
-  // CRITICO: usar org_id del login, NO generar uno nuevo
-  const orgId = sessionStorage.getItem('merka_org_id');
+  // CRITICO: usar org_id del login
+  const orgId = localStorage.getItem('merka_org_id');
   if(!orgId || orgId === 'default'){
     showToast('Error: sesion invalida. Vuelve a ingresar.','error');
     return;
@@ -3752,17 +3747,16 @@ async function createFirstAdmin(){
   await API.call(ENDPOINTS.configuracion, {action:'save', data: cfg}).catch(()=>{});
 
   // Set demo start date
-  sessionStorage.setItem('merka_demo_start', new Date().toISOString());
+  localStorage.setItem('merka_demo_start', new Date().toISOString());
 
   // Auto-login
   session = {id: admin.id, nombre: admin.nombre, rol: admin.rol};
-  sessionStorage.setItem('merka_session', JSON.stringify(session));
+  localStorage.setItem('merka_session', JSON.stringify(session));
   document.getElementById('setupScreen').style.display = 'none';
   document.getElementById('app').classList.remove('hidden');
   updateSessionUI();
   updateLogoElements();
   startPolling();
-  // Cargar todos los datos desde n8n antes de mostrar el terminal
   await syncAll();
   showPage('terminal');
   showToast(`¡Bienvenido, ${nombre}! 7 días de prueba gratuita.`, 'success');
@@ -3772,8 +3766,8 @@ async function createFirstAdmin(){
 // ═══ TRIAL CHECK ═══
 function checkTrialStatus(){
   if(isDemoMode()) return true;
-  const plan = sessionStorage.getItem('merka_plan') || 'trial';
-  const demoStart = sessionStorage.getItem('merka_demo_start');
+  const plan = localStorage.getItem('merka_plan') || 'trial';
+  const demoStart = localStorage.getItem('merka_demo_start');
   if(plan === 'pro' || plan === 'pro-ia') return true;
   if(!demoStart) return true;
   const diasTranscurridos = Math.floor((Date.now() - new Date(demoStart).getTime()) / (1000*60*60*24));
@@ -3832,7 +3826,7 @@ function showTrialExpired(){
 }
 
 function isProIaPlan(){
-  const plan = sessionStorage.getItem('merka_plan') || 'trial';
+  const plan = localStorage.getItem('merka_plan') || 'trial';
   return plan === 'pro-ia';
 }
 
@@ -4655,8 +4649,8 @@ async function syncAll(showFeedback=false){
       try {
         const data = await API.getAll(m);
         if(data && Array.isArray(data)){
-          const normalized = data.map(r => normalizeRecord(m, r));
-          CACHE[m] = normalized;
+          CACHE[m] = data;
+          localStorage.setItem('merka_'+m, JSON.stringify(data));
         }
       } catch(e){ anyFailed = true; }
     }));
@@ -4710,10 +4704,10 @@ window.addEventListener('offline', ()=> setSyncState('offline'));
 function logoutSession(){
   if(!confirm('¿Cerrar sesión?')) return;
   session = null;
-  sessionStorage.removeItem('merka_session');
+  localStorage.removeItem('merka_session');
   // Stop polling
   if(_syncInterval) clearInterval(_syncInterval);
-  sessionStorage.removeItem('merka_org_id');
+  localStorage.removeItem('merka_org_id');
   document.getElementById('app').classList.add('hidden');
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('login-layer1').style.display = 'block';
@@ -4728,7 +4722,7 @@ function logoutSession(){
 
 // ═══ DEMO MODE RESTRICTIONS ═══
 function isDemoMode(){
-  return sessionStorage.getItem('merka_demo_mode') === 'true';
+  return localStorage.getItem('merka_demo_mode') === 'true';
 }
 
 function checkDemoVentaLimit(){ return true; }
@@ -5153,7 +5147,7 @@ async function init(){
   document.getElementById('topbarDate').textContent = todayLabel();
   updateLogoElements();
   // If org_id already stored, pre-fill
-  const storedOrg = sessionStorage.getItem('merka_org_id');
+  const storedOrg = localStorage.getItem('merka_org_id');
   if(storedOrg && document.getElementById('auth-orgid')){
     document.getElementById('auth-orgid').value = storedOrg;
     document.getElementById('auth-pass')?.focus();
