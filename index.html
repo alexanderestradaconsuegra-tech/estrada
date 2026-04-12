@@ -1133,8 +1133,8 @@ const N8N = 'https://n8n-n8n.fa2cjf.easypanel.host/webhook';
 // ═══ ORG_ID — Identificador único de este negocio ═══
 // Cambiar este valor por un ID único para cada cliente
 // Ejemplo: 'negocio-juan-2026' o 'minimarket-santiago-001'
-let ORG_ID = localStorage.getItem('merka_org_id') || 'default';
-function getOrgId(){ return localStorage.getItem('merka_org_id') || 'default'; }
+let ORG_ID = sessionStorage.getItem('merka_org_id') || 'default';
+function getOrgId(){ return sessionStorage.getItem('merka_org_id') || 'default'; }
 
 const ENDPOINTS = {
   productos:     N8N + '/merka-productos',
@@ -1183,8 +1183,8 @@ const API = {
 
 const CACHE = {};
 const DB = {
-  get: k => CACHE[k] || JSON.parse(localStorage.getItem('merka_'+k)||'[]'),
-  set: (k,v) => { CACHE[k]=v; localStorage.setItem('merka_'+k, JSON.stringify(v)); },
+  get: k => CACHE[k] || [],
+  set: (k,v) => { CACHE[k]=v; },
   // Carga desde n8n, fallback a localStorage
   async load(k) {
     // configuracion tiene estructura especial
@@ -1194,7 +1194,6 @@ const DB = {
         if(res && res.datos){
           const cfg = typeof res.datos === 'string' ? JSON.parse(res.datos) : res.datos;
           CACHE['config'] = cfg;
-          localStorage.setItem('merka_config', JSON.stringify(cfg));
           return cfg;
         }
       } catch(e){ console.warn('Config load error:', e); }
@@ -1205,8 +1204,12 @@ const DB = {
       // Normalizar snake_case → camelCase para productos y cobrar
       const normalized = data.map(r => normalizeRecord(k, r));
       CACHE[k] = normalized;
-      localStorage.setItem('merka_'+k, JSON.stringify(normalized));
       return normalized;
+    }
+    // Guard getAll de n8n devuelve {_empty:true} cuando no hay filas → array vacío
+    if(data && data._empty){
+      CACHE[k] = [];
+      return [];
     }
     return DB.get(k);
   },
@@ -1223,20 +1226,21 @@ const DB = {
 };
 
 // Convierte snake_case de Postgres a camelCase del frontend
+// CRÍTICO: siempre coerce id a Number para evitar mismatch string/number con ===
 function normalizeRecord(table, r){
   if(!r) return r;
   if(table === 'productos') return {
-    id: r.id, nombre: r.nombre, sku: r.sku,
+    id: Number(r.id), nombre: r.nombre, sku: r.sku,
     precioCompra: r.precio_compra ?? r.precioCompra ?? 0,
     precioVenta:  r.precio_venta  ?? r.precioVenta  ?? 0,
-    stock: parseFloat(String(r.stock || 0).replace(/,/g, '').replace(/\.(?=\d{3})/g, '')) || 0,
+    stock: parseFloat(r.stock || 0),
     unidad: r.unidad, categoria: r.categoria,
     venderPorPeso: r.vender_por_peso ?? r.venderPorPeso ?? false,
     volumen: typeof r.volumen === 'string' ? JSON.parse(r.volumen||'[]') : (r.volumen||[])
   };
   if(table === 'cobrar') return {
-    id: r.id,
-    clienteId: r.cliente_id ?? r.clienteId,
+    id: Number(r.id),
+    clienteId: Number(r.cliente_id ?? r.clienteId),
     concepto: r.concepto,
     monto: r.monto, pagado: r.pagado,
     fecha: r.fecha?.split?.('T')[0] ?? r.fecha,
@@ -1244,13 +1248,13 @@ function normalizeRecord(table, r){
     pagos: typeof r.pagos === 'string' ? JSON.parse(r.pagos||'[]') : (r.pagos||[])
   };
   if(table === 'ventas') return {
-    id: r.id, fecha: r.fecha?.split?.('T')[0] ?? r.fecha,
+    id: Number(r.id), fecha: r.fecha?.split?.('T')[0] ?? r.fecha,
     items: typeof r.items === 'string' ? JSON.parse(r.items||'[]') : (r.items||[]),
     total: r.total, cliente: r.cliente, nota: r.nota,
     metodo: r.metodo, cajero: r.cajero
   };
   if(table === 'cierres') return {
-    id: r.id, fecha: r.fecha?.split?.('T')[0] ?? r.fecha,
+    id: Number(r.id), fecha: r.fecha?.split?.('T')[0] ?? r.fecha,
     cajero: r.cajero,
     totalVentas:    r.total_ventas    ?? r.totalVentas,
     ventasEfectivo: r.ventas_efectivo ?? r.ventasEfectivo,
@@ -1260,11 +1264,14 @@ function normalizeRecord(table, r){
     diferencia:     r.diferencia,
     nota:           r.nota
   };
+  // Fallback genérico: coerce id a Number para todas las demás tablas
+  // (usuarios, clientes, proveedores, gastos, pagar, etc.)
+  if(r.id !== undefined) return { ...r, id: Number(r.id) };
   return r;
 }
 
 // ═══ SESSION ═══
-let session = JSON.parse(localStorage.getItem('merka_session')||'null');
+let session = JSON.parse(sessionStorage.getItem('merka_session')||'null');
 let loginSelectedUser = null;
 let switchSelectedUser = null;
 
@@ -1320,7 +1327,7 @@ function renderLoginCashiers(targetId, onSelect){
   `).join('');
 }
 function selectLoginUser(id){
-  loginSelectedUser = DB.get('usuarios').find(u=>u.id===id);
+  loginSelectedUser = DB.get('usuarios').find(u=>Number(u.id)===Number(id));
   document.querySelectorAll('#loginCashierList .cashier-btn').forEach(b=>b.classList.remove('selected'));
   document.getElementById('cb-loginCashierList-'+id)?.classList.add('selected');
   const hasPIN = loginSelectedUser && loginSelectedUser.pin;
@@ -1343,11 +1350,12 @@ async function doLogin(){
     return;
   }
   session = { id: loginSelectedUser.id, nombre: loginSelectedUser.nombre, rol: loginSelectedUser.rol };
-  localStorage.setItem('merka_session', JSON.stringify(session));
+  sessionStorage.setItem('merka_session', JSON.stringify(session));
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').classList.remove('hidden');
   updateSessionUI();
   startPolling();
+  // Cargar todos los datos desde n8n antes de mostrar el terminal
   await syncAll();
   showPage('terminal');
   setTimeout(checkDemo, 1000);
@@ -1364,7 +1372,7 @@ function openSwitchOverlay(){
 }
 function closeSwitchOverlay(){ document.getElementById('switchOverlay').classList.remove('open'); }
 function selectSwitchUser(id){
-  switchSelectedUser = DB.get('usuarios').find(u=>u.id===id);
+  switchSelectedUser = DB.get('usuarios').find(u=>Number(u.id)===Number(id));
   document.querySelectorAll('#switchCashierList .cashier-btn').forEach(b=>b.classList.remove('selected'));
   document.getElementById('cb-switchCashierList-'+id)?.classList.add('selected');
   const hasPIN = switchSelectedUser && switchSelectedUser.pin;
@@ -1387,7 +1395,7 @@ function doSwitch(){
     return;
   }
   session = { id: switchSelectedUser.id, nombre: switchSelectedUser.nombre, rol: switchSelectedUser.rol };
-  localStorage.setItem('merka_session', JSON.stringify(session));
+  sessionStorage.setItem('merka_session', JSON.stringify(session));
   closeSwitchOverlay();
   updateSessionUI();
 }
@@ -1399,6 +1407,7 @@ function updateSessionUI(){
   av.textContent = getInitials(session.nombre);
   av.className = 'session-avatar ' + getColor(session.id||0);
   document.getElementById('nav-usuarios').style.display = session.rol==='Administrador'?'flex':'none';
+  document.getElementById('nav-agente').style.display = isProIaPlan() ? 'flex' : 'none';
   updateLogoElements();
 }
 function updateLogoElements(){
@@ -1626,7 +1635,7 @@ function renderTerminalProducts(){
     return;
   }
   grid.innerHTML = filtered.map(p=>{
-    const sinStock = !p.stock || parseFloat(p.stock) <= 0;
+    const sinStock = p.stock===0||p.stock<=0;
     const esPeso = !!p.venderPorPeso;
     const stockLabel = sinStock ? 'Sin stock' : (esPeso ? (parseFloat(p.stock).toFixed(2)+' kg disp.') : (p.stock+' '+p.unidad));
     const priceLabel = esPeso ? fmt(p.precioVenta)+'/kg' : fmt(p.precioVenta);
@@ -1643,14 +1652,14 @@ function renderTerminalProducts(){
 }
 
 function addToCart(productoId){
-  const p = DB.get('productos').find(x=>x.id===productoId);
+  const p = DB.get('productos').find(x=>Number(x.id)===Number(productoId));
   if(!p||p.stock<=0) return;
-  const existing = tCart.find(i=>i.productoId===productoId&&!i.esPeso);
+  const existing = tCart.find(i=>Number(i.productoId)===Number(productoId)&&!i.esPeso);
   if(existing){
     if(existing.qty >= p.stock) return;
     existing.qty++;
   } else {
-    tCart.push({cartId:Date.now(),productoId:p.id,nombre:p.nombre,precio:p.precioVenta,qty:1,esPeso:false,unidad:p.unidad});
+    tCart.push({cartId:Date.now(),productoId:Number(p.id),nombre:p.nombre,precio:p.precioVenta,qty:1,esPeso:false,unidad:p.unidad});
   }
   renderCart();
 }
@@ -1661,7 +1670,7 @@ let _wpValue = ''; // raw string input
 let _wpUnit = 'g'; // 'g' or 'kg'
 
 function openWeightPicker(productoId){
-  const p = DB.get('productos').find(x=>x.id===productoId);
+  const p = DB.get('productos').find(x=>Number(x.id)===Number(productoId));
   if(!p) return;
   _wpProductoId = productoId;
   _wpValue = '';
@@ -1715,7 +1724,7 @@ function updateWpDisplay(){
   const raw = parseFloat(_wpValue)||0;
   const displayVal = _wpValue===''?'0':_wpValue;
   document.getElementById('wp-display').textContent = displayVal;
-  const p = DB.get('productos').find(x=>x.id===_wpProductoId);
+  const p = DB.get('productos').find(x=>Number(x.id)===Number(_wpProductoId));
   if(!p){ return; }
   // Convert to kg for price calc
   const kg = _wpUnit==='g' ? raw/1000 : raw;
@@ -1725,7 +1734,7 @@ function updateWpDisplay(){
   document.getElementById('wp-add-btn').disabled = !isValid;
 }
 function confirmWeight(){
-  const p = DB.get('productos').find(x=>x.id===_wpProductoId);
+  const p = DB.get('productos').find(x=>Number(x.id)===Number(_wpProductoId));
   if(!p) return;
   const raw = parseFloat(_wpValue)||0;
   const kg = _wpUnit==='g' ? raw/1000 : raw;
@@ -1753,7 +1762,7 @@ function confirmWeight(){
 function changeQty(cartId, delta){
   const item = tCart.find(i=>i.cartId===cartId);
   if(!item||item.esPeso) return; // peso items → no se modifica con +/-
-  const p = DB.get('productos').find(x=>x.id===item.productoId);
+  const p = DB.get('productos').find(x=>Number(x.id)===Number(item.productoId));
   item.qty += delta;
   if(item.qty <= 0){
     tCart = tCart.filter(i=>i.cartId!==cartId);
@@ -1873,7 +1882,7 @@ function cobrarVenta(){
   if(clienteVal && tMetodo==='Crédito'){
     const cliente = DB.get('clientes').find(c=>c.nombre===clienteVal);
     if(cliente && cliente.limiteCredito > 0){
-      const deudaActual = DB.get('cobrar').filter(c=>c.clienteId===cliente.id).reduce((s,c)=>s+(c.monto-c.pagado),0);
+      const deudaActual = DB.get('cobrar').filter(c=>Number(c.clienteId)===Number(cliente.id)).reduce((s,c)=>s+(c.monto-c.pagado),0);
       if(deudaActual + total > cliente.limiteCredito){
         alert(`Límite de crédito excedido.\nDeuda actual: ${fmt(deudaActual)}\nLímite: ${fmt(cliente.limiteCredito)}\nDisponible: ${fmt(Math.max(0,cliente.limiteCredito-deudaActual))}`);
         return;
@@ -1890,7 +1899,7 @@ function cobrarVenta(){
   let productos = DB.get('productos');
   items.forEach(i=>{
     productos = productos.map(p=>{
-      if(p.id!==i.productoId) return p;
+      if(Number(p.id) !== Number(i.productoId)) return p;
       const newStock = Math.max(0, parseFloat(p.stock) - parseFloat(i.qty));
       return {...p, stock: i.esPeso ? Math.round(newStock*1000)/1000 : Math.round(newStock)};
     });
@@ -1905,7 +1914,7 @@ function cobrarVenta(){
 
   // Sync stock actualizado de cada producto afectado
   items.forEach(i=>{
-    const p = DB.get('productos').find(x=>x.id===i.productoId);
+    const p = DB.get('productos').find(x=>Number(x.id)===Number(i.productoId));
     if(p) DB.sync('productos', p);
   });
   showSuccessFlash(total, tMetodo, venta.id);
@@ -1957,7 +1966,7 @@ function renderDashboard(){
   const gastosHoy = gastos.filter(g=>g.fecha===hoy);
   const totalGastosHoy = gastosHoy.reduce((s,g)=>s+g.monto,0);
   const gastosEfectivo = gastosHoy.filter(g=>!g.metodo||g.metodo==='Efectivo').reduce((s,g)=>s+g.monto,0);
-  const costoVentasHoy = ventasHoy.reduce((s,v)=>s+v.items.reduce((ss,it)=>{const p=productos.find(x=>x.id===it.productoId);return ss+(p?p.precioCompra*parseFloat(it.qty||0):0);},0),0);
+  const costoVentasHoy = ventasHoy.reduce((s,v)=>s+v.items.reduce((ss,it)=>{const p=productos.find(x=>Number(x.id)===Number(it.productoId));return ss+(p?p.precioCompra*parseFloat(it.qty||0):0);},0),0);
   const gananciaNeta = totalVentasHoy - costoVentasHoy - totalGastosHoy;
 
   document.getElementById('content').innerHTML = `
@@ -2021,7 +2030,7 @@ function renderDashboard(){
         <div class="table-wrap"><table>
           <tr><th>Cliente</th><th>Pendiente</th><th>Vence</th></tr>
           ${cobrar.filter(c=>c.monto-c.pagado>0).map(c=>{
-            const cl = DB.get('clientes').find(x=>x.id===c.clienteId)||{nombre:'—'};
+            const cl = DB.get('clientes').find(x=>Number(x.id)===Number(c.clienteId))||{nombre:'—'};
             const vencido = new Date(c.vencimiento)<new Date();
             return `<tr>
               <td>${cl.nombre}</td>
@@ -2155,7 +2164,7 @@ function saveProducto(id, isEdit){
   const prod = {id,nombre:document.getElementById('f-nombre').value.trim(),sku:document.getElementById('f-sku').value.trim(),precioCompra:parseInt(document.getElementById('f-compra').value)||0,precioVenta:parseInt(document.getElementById('f-venta').value)||0,stock:parseFloat(document.getElementById('f-stock').value)||0,unidad:document.getElementById('f-unidad').value,categoria:document.getElementById('f-cat').value,venderPorPeso:document.getElementById('f-peso').checked,volumen:vols};
   if(!prod.nombre) return alert('Nombre obligatorio');
   let productos = DB.get('productos');
-  if(isEdit) productos = productos.map(p=>p.id===id?prod:p);
+  if(isEdit) productos = productos.map(p=>Number(p.id)===Number(id)?prod:p);
   else productos.push(prod);
   DB.set('productos', productos);
   DB.sync('productos', prod);
@@ -2164,7 +2173,7 @@ function saveProducto(id, isEdit){
 }
 async function deleteProducto(id){
   if(!confirm('¿Eliminar producto?')) return;
-  const dp=DB.get('productos').find(p=>p.id===id);
+  const dp=DB.get('productos').find(p=>Number(p.id)===Number(id));
   DB.set('productos', DB.get('productos').filter(p=>p.id!==id));
   renderInventario();
   await DB.remove('productos', id);
@@ -2188,7 +2197,7 @@ function renderClientes(search=''){
       <div class="table-wrap"><table>
         <tr><th>Nombre</th><th>RUT</th><th>Empresa</th><th>Teléfono</th><th>Ciudad</th><th>Por cobrar</th><th></th></tr>
         ${clientes.map(c=>{
-          const pend = DB.get('cobrar').filter(x=>x.clienteId===c.id).reduce((s,x)=>s+(x.monto-x.pagado),0);
+          const pend = DB.get('cobrar').filter(x=>Number(x.clienteId)===Number(c.id)).reduce((s,x)=>s+(x.monto-x.pagado),0);
           return `<tr>
             <td><strong>${c.nombre}</strong>${c.nota?`<br><span style="font-size:11px;color:var(--muted)">${c.nota}</span>`:''}</td>
             <td class="td-mono" style="font-size:11px">${c.rut||'—'}</td>
@@ -2235,7 +2244,7 @@ function saveCliente(id,isEdit){
   const cl = {id,nombre:document.getElementById('c-nombre').value.trim(),empresa:document.getElementById('c-empresa').value.trim(),rut:document.getElementById('c-rut').value.trim(),telefono:document.getElementById('c-tel').value.trim(),email:document.getElementById('c-email').value.trim(),direccion:document.getElementById('c-dir').value.trim(),ciudad:document.getElementById('c-ciudad').value.trim(),nota:document.getElementById('c-nota').value.trim(),limiteCredito:parseInt(document.getElementById('c-limite')?.value)||0,diasCredito:parseInt(document.getElementById('c-dias')?.value)||0};
   if(!cl.nombre) return alert('Nombre obligatorio');
   let clientes = DB.get('clientes');
-  if(isEdit) clientes = clientes.map(c=>c.id===id?cl:c);
+  if(isEdit) clientes = clientes.map(c=>Number(c.id)===Number(id)?cl:c);
   else clientes.push(cl);
   DB.set('clientes',clientes);
   DB.sync('clientes', cl);
@@ -2263,7 +2272,7 @@ function openCuentasClienteModal(){
     </div>
     <div style="max-height:400px;overflow-y:auto;">
       ${pendientes.length ? pendientes.map(c=>{
-        const cl=clientes.find(x=>x.id===c.clienteId)||{nombre:'—'};
+        const cl=clientes.find(x=>Number(x.id)===Number(c.clienteId))||{nombre:'—'};
         const pend=c.monto-c.pagado;
         const vencido=new Date(c.vencimiento)<new Date();
         return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bdr);gap:8px;">
@@ -2286,7 +2295,7 @@ function openCuentasClienteModal(){
 }
 function openCuentaClienteModal(clienteId){
   const cobrar = DB.get('cobrar').filter(c=>c.clienteId===clienteId);
-  const cl = DB.get('clientes').find(x=>x.id===clienteId)||{nombre:'—'};
+  const cl = DB.get('clientes').find(x=>Number(x.id)===Number(clienteId))||{nombre:'—'};
   const totalPend = cobrar.reduce((s,c)=>s+(c.monto-c.pagado),0);
   openModal(`
     <div class="modal-title">💰 ${cl.nombre}</div>
@@ -2386,7 +2395,7 @@ function renderVentas(filtroFecha){
 function deleteVenta(id){
   if(!checkPerm('eliminarVentas','No tienes permiso para eliminar ventas.')) return;
   if(!confirm('¿Eliminar venta?')) return;
-  const dv=DB.get('ventas').find(v=>v.id===id);
+  const dv=DB.get('ventas').find(v=>Number(v.id)===Number(id));
   DB.set('ventas',DB.get('ventas').filter(v=>v.id!==id));
   logAudit('Venta eliminada','Ventas',`ID ${id} · ${fmt(dv?.total||0)}`);
   renderVentas();
@@ -2400,13 +2409,16 @@ function renderCobrar(){
   const totalDeuda = cobrar.reduce((s,c)=>s+c.monto,0);
   const totalPagado = cobrar.reduce((s,c)=>s+c.pagado,0);
   const totalPendiente = totalDeuda-totalPagado;
+  const recepciones = DB.get('recepciones')||[];
+  const proveedores = DB.get('proveedores')||[];
+  const pagar = DB.get('pagar')||[];
   const recepciones_con_factura = recepciones.length ? `
     <div class="section-card" style="margin-top:16px;">
       <div class="card-header"><div><div class="card-title">Historial de recepciones</div><div class="card-sub">${recepciones.length} facturas recibidas</div></div></div>
       <div class="table-wrap"><table>
         <tr><th>Fecha</th><th>Factura</th><th>Proveedor</th><th>Monto</th><th>Vence</th><th>Estado</th></tr>
         ${[...recepciones].reverse().map(r=>{
-          const pv=proveedores.find(x=>x.id===r.proveedorId)||{nombre:'—'};
+          const pv=proveedores.find(x=>Number(x.id)===Number(r.proveedorId))||{nombre:'—'};
           const cuentaPagar=pagar.find(p=>p.facturaRef===r.factura);
           const pagada=cuentaPagar&&cuentaPagar.pagado>=cuentaPagar.monto;
           return `<tr>
@@ -2432,7 +2444,7 @@ function renderCobrar(){
       <div class="table-wrap"><table>
         <tr><th>Cliente</th><th>Concepto</th><th>Fecha</th><th>Vence</th><th>Total</th><th>Pagado</th><th>Pendiente</th><th>Estado</th><th></th></tr>
         ${cobrar.map(c=>{
-          const cl = clientes.find(x=>x.id===c.clienteId)||{nombre:'—'};
+          const cl = clientes.find(x=>Number(x.id)===Number(c.clienteId))||{nombre:'—'};
           const pend = c.monto-c.pagado;
           const vencido = new Date(c.vencimiento)<new Date()&&pend>0;
           const pct = Math.round((c.pagado/c.monto)*100);
@@ -2481,7 +2493,7 @@ function saveCobrar(id,isEdit){
   const cuenta = {id,clienteId:parseInt(document.getElementById('cb-cliente').value),concepto:document.getElementById('cb-concepto').value.trim(),monto:parseInt(document.getElementById('cb-monto').value)||0,pagado:0,fecha:document.getElementById('cb-fecha').value,vencimiento:document.getElementById('cb-vence').value,pagos:[]};
   if(!cuenta.concepto||!cuenta.monto) return alert('Completa concepto y monto');
   let cobrar = DB.get('cobrar');
-  if(isEdit){ const ex=cobrar.find(c=>c.id===id); cuenta.pagado=ex?ex.pagado:0; cuenta.pagos=ex?ex.pagos:[]; cobrar=cobrar.map(c=>c.id===id?cuenta:c); }
+  if(isEdit){ const ex=cobrar.find(c=>Number(c.id)===Number(id)); cuenta.pagado=ex?ex.pagado:0; cuenta.pagos=ex?ex.pagos:[]; cobrar=cobrar.map(c=>Number(c.id)===Number(id)?cuenta:c); }
   else cobrar.push(cuenta);
   DB.set('cobrar',cobrar);
   DB.sync('cobrar', cuenta);
@@ -2767,7 +2779,7 @@ function saveUsuario(id,isEdit){
   const u = {id,nombre:document.getElementById('u-nombre').value.trim(),rol:document.getElementById('u-rol').value,activo:document.getElementById('u-activo').value==='true',pin:document.getElementById('u-pin').value,permisos};
   if(!u.nombre) return alert('Nombre obligatorio');
   let usuarios = DB.get('usuarios');
-  if(isEdit) usuarios = usuarios.map(x=>x.id===id?u:x);
+  if(isEdit) usuarios = usuarios.map(x=>Number(x.id)===Number(id)?u:x);
   else usuarios.push(u);
   DB.set('usuarios',usuarios);
   DB.sync('usuarios', u);
@@ -2777,14 +2789,14 @@ function saveUsuario(id,isEdit){
   if(isEdit && session && session.id === u.id){
     session.nombre = u.nombre;
     session.rol = u.rol;
-    localStorage.setItem('merka_session', JSON.stringify(session));
+    sessionStorage.setItem('merka_session', JSON.stringify(session));
     updateSessionUI();
   }
 }
 function deleteUsuario(id){
   if(session&&session.id===id){ alert('No puedes eliminar el usuario activo.'); return; }
   if(!confirm('¿Eliminar usuario?')) return;
-  const du=DB.get('usuarios').find(u=>u.id===id);
+  const du=DB.get('usuarios').find(u=>Number(u.id)===Number(id));
   DB.set('usuarios',DB.get('usuarios').filter(u=>u.id!==id));
   DB.remove('usuarios',id);
   logAudit('Usuario eliminado','Usuarios',du?.nombre||id);
@@ -2855,7 +2867,7 @@ function renderCalendario(){
       <div class="table-wrap"><table>
         <tr><th>Cliente</th><th>Concepto</th><th>Pendiente</th><th></th></tr>
         ${cobrarVenc.map(c=>{
-          const cl = clientes.find(x=>x.id===c.clienteId)||{nombre:'—'};
+          const cl = clientes.find(x=>Number(x.id)===Number(c.clienteId))||{nombre:'—'};
           return `<tr>
             <td><strong>${cl.nombre}</strong></td>
             <td>${c.concepto}</td>
@@ -2886,7 +2898,7 @@ function renderProveedores(search=''){
       <div class="table-wrap"><table>
         <tr><th>Nombre</th><th>RUT</th><th>Contacto</th><th>Teléfono</th><th>Ciudad</th><th>Por pagar</th><th></th></tr>
         ${proveedores.map(p=>{
-          const pend = DB.get('pagar').filter(x=>x.proveedorId===p.id).reduce((s,x)=>s+(x.monto-x.pagado),0);
+          const pend = DB.get('pagar').filter(x=>Number(x.proveedorId)===Number(p.id)).reduce((s,x)=>s+(x.monto-x.pagado),0);
           return `<tr>
             <td><strong>${p.nombre}</strong>${p.nota?`<br><span style="font-size:11px;color:var(--muted)">${p.nota}</span>`:''}</td>
             <td class="td-mono" style="font-size:11px">${p.rut||'—'}</td>
@@ -2927,7 +2939,7 @@ function saveProveedor(id,isEdit){
   const p = {id,nombre:document.getElementById('pv-nombre').value.trim(),contacto:document.getElementById('pv-contacto').value.trim(),rut:document.getElementById('pv-rut').value.trim(),telefono:document.getElementById('pv-tel').value.trim(),email:document.getElementById('pv-email').value.trim(),direccion:document.getElementById('pv-dir').value.trim(),ciudad:document.getElementById('pv-ciudad').value.trim(),nota:document.getElementById('pv-nota').value.trim()};
   if(!p.nombre) return alert('Nombre obligatorio');
   let proveedores = DB.get('proveedores');
-  if(isEdit) proveedores = proveedores.map(x=>x.id===id?p:x);
+  if(isEdit) proveedores = proveedores.map(x=>Number(x.id)===Number(id)?p:x);
   else proveedores.push(p);
   DB.set('proveedores',proveedores);
   closeModal(); renderProveedores();
@@ -2959,7 +2971,7 @@ function renderPagar(){
       <div class="table-wrap"><table>
         <tr><th>Proveedor</th><th>Concepto</th><th>Fecha</th><th>Vence</th><th>Total</th><th>Pagado</th><th>Pendiente</th><th>Estado</th><th></th></tr>
         ${pagar.map(c=>{
-          const pv = proveedores.find(x=>x.id===c.proveedorId)||{nombre:'—'};
+          const pv = proveedores.find(x=>Number(x.id)===Number(c.proveedorId))||{nombre:'—'};
           const pend = c.monto-c.pagado;
           const vencido = new Date(c.vencimiento)<new Date()&&pend>0;
           const pct = Math.round((c.pagado/c.monto)*100);
@@ -3007,7 +3019,7 @@ function savePagar(id,isEdit){
   const cuenta = {id,proveedorId:parseInt(document.getElementById('pg-prov').value),concepto:document.getElementById('pg-concepto').value.trim(),monto:parseInt(document.getElementById('pg-monto').value)||0,pagado:0,fecha:document.getElementById('pg-fecha').value,vencimiento:document.getElementById('pg-vence').value,pagos:[]};
   if(!cuenta.concepto||!cuenta.monto) return alert('Completa concepto y monto');
   let pagar = DB.get('pagar');
-  if(isEdit){ const ex=pagar.find(c=>c.id===id); cuenta.pagado=ex?ex.pagado:0; cuenta.pagos=ex?ex.pagos:[]; pagar=pagar.map(c=>c.id===id?cuenta:c); }
+  if(isEdit){ const ex=pagar.find(c=>Number(c.id)===Number(id)); cuenta.pagado=ex?ex.pagado:0; cuenta.pagos=ex?ex.pagos:[]; pagar=pagar.map(c=>Number(c.id)===Number(id)?cuenta:c); }
   else pagar.push(cuenta);
   DB.set('pagar',pagar);
   closeModal(); renderPagar(); updatePagarBadge();
@@ -3057,7 +3069,7 @@ function updatePagarBadge(){
 
 // ═══ BOLETA DE VENTA ═══
 function printBoleta(ventaId){
-  const venta = DB.get('ventas').find(v=>v.id===ventaId);
+  const venta = DB.get('ventas').find(v=>Number(v.id)===Number(ventaId));
   if(!venta) return;
   const cfg = DB.get('config')||{};
   const biz = cfg.businessName || 'Mi Negocio';
@@ -3106,7 +3118,7 @@ function printBoleta(ventaId){
 }
 
 function printCierre(cierreId){
-  const c = DB.get('cierres').find(x=>x.id===cierreId) || DB.get('cierres').find(x=>x.fecha===today());
+  const c = DB.get('cierres').find(x=>Number(x.id)===Number(cierreId)) || DB.get('cierres').find(x=>x.fecha===today());
   if(!c) return;
   const cfg = DB.get('config')||{};
   const win = window.open('','_blank','width=400,height=500');
@@ -3155,7 +3167,7 @@ function sendCierreWhatsapp(){
 }
 
 function sendBoletaWhatsapp(ventaId){
-  const venta = DB.get('ventas').find(v=>v.id===ventaId);
+  const venta = DB.get('ventas').find(v=>Number(v.id)===Number(ventaId));
   if(!venta) return;
   const cfg = DB.get('config')||{};
   const wa = cfg.whatsapp||'';
@@ -3215,7 +3227,7 @@ function exportExcel(tipo){
       Teléfono: c.telefono||'',
       Email: c.email||'',
       Ciudad: c.ciudad||'',
-      'Por Cobrar': DB.get('cobrar').filter(x=>x.clienteId===c.id).reduce((s,x)=>s+(x.monto-x.pagado),0)
+      'Por Cobrar': DB.get('cobrar').filter(x=>Number(x.clienteId)===Number(c.id)).reduce((s,x)=>s+(x.monto-x.pagado),0)
     }));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Clientes');
   }
@@ -3223,7 +3235,7 @@ function exportExcel(tipo){
     const cobrar = DB.get('cobrar');
     const clientes = DB.get('clientes');
     const rows = cobrar.map(c=>{
-      const cl = clientes.find(x=>x.id===c.clienteId)||{nombre:'—'};
+      const cl = clientes.find(x=>Number(x.id)===Number(c.clienteId))||{nombre:'—'};
       return {
         Cliente: cl.nombre,
         RUT: cl.rut||'',
@@ -3247,7 +3259,7 @@ function exportExcel(tipo){
       Teléfono: p.telefono||'',
       Email: p.email||'',
       Ciudad: p.ciudad||'',
-      'Por Pagar': DB.get('pagar').filter(x=>x.proveedorId===p.id).reduce((s,x)=>s+(x.monto-x.pagado),0)
+      'Por Pagar': DB.get('pagar').filter(x=>Number(x.proveedorId)===Number(p.id)).reduce((s,x)=>s+(x.monto-x.pagado),0)
     }));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Proveedores');
   }
@@ -3255,7 +3267,7 @@ function exportExcel(tipo){
     const pagar = DB.get('pagar');
     const proveedores = DB.get('proveedores');
     const rows = pagar.map(c=>{
-      const pv = proveedores.find(x=>x.id===c.proveedorId)||{nombre:'—'};
+      const pv = proveedores.find(x=>Number(x.id)===Number(c.proveedorId))||{nombre:'—'};
       return {
         Proveedor: pv.nombre,
         RUT: pv.rut||'',
@@ -3429,7 +3441,7 @@ function importExcel(tipo, input){
         let ventas = DB.get('ventas');
         rows.forEach(r=>{
           if(!r.Total) return;
-          const exists = ventas.find(v=>v.id===r['N° Venta']);
+          const exists = ventas.find(v=>Number(v.id)===Number(r['N° Venta']));
           if(!exists){
             const v = {id:r['N° Venta']||Date.now()+imported,fecha:r.Fecha||today(),items:[],total:parseInt(r.Total||0),cliente:r.Cliente||'',nota:'',metodo:r.Método||r.Metodo||'Efectivo',cajero:r.Cajero||''};
             ventas.push(v);
@@ -3659,26 +3671,28 @@ async function authLogin(){
 
   try {
     const res = await API.call(ENDPOINTS.auth, {action:'login', org_id: orgId, password: pass});
-    const resData = res?.data || res;
+    // API.call retorna array cuando json.data es array — necesitamos el primer elemento
+    const resData = Array.isArray(res) ? res[0] : (res?.data || res);
     if(resData && (resData.found === true || resData.org_id)){
       const negocio = resData;
       // Clear previous org cache if different org
-      const prevOrg = localStorage.getItem('merka_org_id');
+      const prevOrg = sessionStorage.getItem('merka_org_id');
       if(prevOrg !== orgId){
         ['productos','clientes','ventas','cobrar','cierres','gastos','proveedores','pagar','usuarios','config','aperturas','recepciones','auditlog'].forEach(k=>{
-          localStorage.removeItem('merka_'+k);
+          delete CACHE[k];
           delete CACHE[k];
         });
       }
-      localStorage.setItem('merka_org_id', orgId);
+      sessionStorage.setItem('merka_org_id', orgId);
       ORG_ID = orgId;
-      localStorage.removeItem('merka_demo_mode');
-      localStorage.removeItem('merka_demo_ventas');
-      if(negocio.demo_start) localStorage.setItem('merka_demo_start', negocio.demo_start);
-      localStorage.setItem('merka_plan', negocio.plan || 'trial');
+      sessionStorage.removeItem('merka_demo_mode');
+      sessionStorage.removeItem('merka_demo_ventas');
+      if(negocio.demo_start) sessionStorage.setItem('merka_demo_start', negocio.demo_start);
+      sessionStorage.setItem('merka_plan', negocio.plan || 'trial');
       await DB.load('usuarios');
       await DB.load('config');
       await DB.load('productos');
+      await DB.load('clientes');
       updateLogoElements();
       document.getElementById('login-layer1').style.display = 'none';
       document.getElementById('login-layer2').style.display = 'block';
@@ -3709,7 +3723,7 @@ function backToLayer1(){
   document.getElementById('login-layer1').style.display = 'block';
   document.getElementById('login-layer2').style.display = 'none';
   document.getElementById('loginCashierList').innerHTML = '';
-  localStorage.removeItem('merka_org_id');
+  sessionStorage.removeItem('merka_org_id');
 }
 
 
@@ -3721,8 +3735,8 @@ async function createFirstAdmin(){
   if(!nombre) return showToast('Ingresa tu nombre','error');
   if(!pin || pin.length < 4) return showToast('PIN debe tener al menos 4 dígitos','error');
 
-  // CRITICO: usar org_id del login
-  const orgId = localStorage.getItem('merka_org_id');
+  // CRITICO: usar org_id del login, NO generar uno nuevo
+  const orgId = sessionStorage.getItem('merka_org_id');
   if(!orgId || orgId === 'default'){
     showToast('Error: sesion invalida. Vuelve a ingresar.','error');
     return;
@@ -3747,16 +3761,17 @@ async function createFirstAdmin(){
   await API.call(ENDPOINTS.configuracion, {action:'save', data: cfg}).catch(()=>{});
 
   // Set demo start date
-  localStorage.setItem('merka_demo_start', new Date().toISOString());
+  sessionStorage.setItem('merka_demo_start', new Date().toISOString());
 
   // Auto-login
   session = {id: admin.id, nombre: admin.nombre, rol: admin.rol};
-  localStorage.setItem('merka_session', JSON.stringify(session));
+  sessionStorage.setItem('merka_session', JSON.stringify(session));
   document.getElementById('setupScreen').style.display = 'none';
   document.getElementById('app').classList.remove('hidden');
   updateSessionUI();
   updateLogoElements();
   startPolling();
+  // Cargar todos los datos desde n8n antes de mostrar el terminal
   await syncAll();
   showPage('terminal');
   showToast(`¡Bienvenido, ${nombre}! 7 días de prueba gratuita.`, 'success');
@@ -3766,8 +3781,8 @@ async function createFirstAdmin(){
 // ═══ TRIAL CHECK ═══
 function checkTrialStatus(){
   if(isDemoMode()) return true;
-  const plan = localStorage.getItem('merka_plan') || 'trial';
-  const demoStart = localStorage.getItem('merka_demo_start');
+  const plan = sessionStorage.getItem('merka_plan') || 'trial';
+  const demoStart = sessionStorage.getItem('merka_demo_start');
   if(plan === 'pro' || plan === 'pro-ia') return true;
   if(!demoStart) return true;
   const diasTranscurridos = Math.floor((Date.now() - new Date(demoStart).getTime()) / (1000*60*60*24));
@@ -3826,7 +3841,7 @@ function showTrialExpired(){
 }
 
 function isProIaPlan(){
-  const plan = localStorage.getItem('merka_plan') || 'trial';
+  const plan = sessionStorage.getItem('merka_plan') || 'trial';
   return plan === 'pro-ia';
 }
 
@@ -3851,7 +3866,7 @@ function cobrarCredito(){
   // Check credit limit
   let disponible = null;
   if(cliente.limiteCredito > 0){
-    const deudaActual = DB.get('cobrar').filter(c=>c.clienteId===cliente.id).reduce((s,c)=>s+(c.monto-c.pagado),0);
+    const deudaActual = DB.get('cobrar').filter(c=>Number(c.clienteId)===Number(cliente.id)).reduce((s,c)=>s+(c.monto-c.pagado),0);
     disponible = cliente.limiteCredito - deudaActual;
     if(disponible < total){
       showToast(`Límite de crédito insuficiente. Disponible: ${fmt(disponible)}`,'error');
@@ -4119,7 +4134,7 @@ function logAudit(accion, modulo, detalle){
 function canDo(permiso){
   if(!session) return false;
   if(session.rol==='Administrador') return true;
-  const u = DB.get('usuarios').find(x=>x.id===session.id);
+  const u = DB.get('usuarios').find(x=>Number(x.id)===Number(session.id));
   if(!u||!u.permisos) return false;
   return !!u.permisos[permiso];
 }
@@ -4197,7 +4212,7 @@ function saveGasto(){
 }
 function deleteGasto(id){
   if(!confirm('¿Eliminar gasto?')) return;
-  const g = DB.get('gastos').find(x=>x.id===id);
+  const g = DB.get('gastos').find(x=>Number(x.id)===Number(id));
   DB.set('gastos',DB.get('gastos').filter(x=>x.id!==id));
   DB.remove('gastos', id);
   logAudit('Gasto eliminado','Gastos',g?.concepto||id);
@@ -4239,7 +4254,7 @@ function renderReportes(){
   const totalVentas = ventasFiltradas.reduce((s,v)=>s+v.total,0);
   const totalGastos = gastosFiltrados.reduce((s,g)=>s+g.monto,0);
   const costoVentas = ventasFiltradas.reduce((s,v)=>s+v.items.reduce((ss,it)=>{
-    const p=productos.find(x=>x.id===it.productoId);
+    const p=productos.find(x=>Number(x.id)===Number(it.productoId));
     return ss+(p?(p.precioCompra*parseFloat(it.qty||0)):0);
   },0),0);
   const gananciasBruta = totalVentas - costoVentas;
@@ -4248,7 +4263,7 @@ function renderReportes(){
 
   const catVentas = {};
   ventasFiltradas.forEach(v=>v.items.forEach(it=>{
-    const p=productos.find(x=>x.id===it.productoId);
+    const p=productos.find(x=>Number(x.id)===Number(it.productoId));
     const cat=p?.categoria||'Sin categoría';
     catVentas[cat]=(catVentas[cat]||0)+it.subtotal;
   }));
@@ -4493,7 +4508,7 @@ function saveRecepcion(){
       const newCosto = it.costo > 0 ? it.costo : p.precioCompra;
       return {...p, stock: Math.round(newStock*1000)/1000, precioCompra: newCosto};
     });
-    DB.sync('productos', productos.find(p=>p.id===it.productoId));
+    DB.sync('productos', productos.find(p=>Number(p.id)===Number(it.productoId)));
   });
   DB.set('productos', productos);
 
@@ -4525,7 +4540,7 @@ function verDetalle(tipo, id){
   let titulo = '', html = '';
 
   if(tipo==='venta'){
-    const v = DB.get('ventas').find(x=>x.id===id);
+    const v = DB.get('ventas').find(x=>Number(x.id)===Number(id));
     if(!v) return;
     titulo = `Venta #${String(id).slice(-6)}`;
     html = `
@@ -4543,10 +4558,10 @@ function verDetalle(tipo, id){
       <div class="total"><span>TOTAL</span><span>$${Math.round(v.total).toLocaleString('es-CL')}</span></div>`;
   }
   else if(tipo==='cliente'){
-    const c = DB.get('clientes').find(x=>x.id===id);
+    const c = DB.get('clientes').find(x=>Number(x.id)===Number(id));
     if(!c) return;
     titulo = `Cliente: ${c.nombre}`;
-    const deuda = DB.get('cobrar').filter(x=>x.clienteId===c.id).reduce((s,x)=>s+(x.monto-x.pagado),0);
+    const deuda = DB.get('cobrar').filter(x=>Number(x.clienteId)===Number(c.id)).reduce((s,x)=>s+(x.monto-x.pagado),0);
     const ventas = DB.get('ventas').filter(v=>v.cliente===c.nombre);
     const totalVentas = ventas.reduce((s,v)=>s+v.total,0);
     html = `
@@ -4564,10 +4579,10 @@ function verDetalle(tipo, id){
       ${c.nota?`<div class="divider"></div><div class="small">${c.nota}</div>`:''}`;
   }
   else if(tipo==='proveedor'){
-    const p = DB.get('proveedores').find(x=>x.id===id);
+    const p = DB.get('proveedores').find(x=>Number(x.id)===Number(id));
     if(!p) return;
     titulo = `Proveedor: ${p.nombre}`;
-    const deuda = DB.get('pagar').filter(x=>x.proveedorId===p.id).reduce((s,x)=>s+(x.monto-x.pagado),0);
+    const deuda = DB.get('pagar').filter(x=>Number(x.proveedorId)===Number(p.id)).reduce((s,x)=>s+(x.monto-x.pagado),0);
     html = `
       <div class="center"><div class="title">${p.nombre}</div></div>
       <div class="divider"></div>
@@ -4581,9 +4596,9 @@ function verDetalle(tipo, id){
       ${p.nota?`<div class="divider"></div><div class="small">${p.nota}</div>`:''}`;
   }
   else if(tipo==='cobrar'){
-    const c = DB.get('cobrar').find(x=>x.id===id);
+    const c = DB.get('cobrar').find(x=>Number(x.id)===Number(id));
     if(!c) return;
-    const cl = DB.get('clientes').find(x=>x.id===c.clienteId)||{nombre:'—'};
+    const cl = DB.get('clientes').find(x=>Number(x.id)===Number(c.clienteId))||{nombre:'—'};
     titulo = `Cuenta por cobrar #${String(id).slice(-4)}`;
     html = `
       <div class="center"><div class="title">${biz}</div></div>
@@ -4649,8 +4664,8 @@ async function syncAll(showFeedback=false){
       try {
         const data = await API.getAll(m);
         if(data && Array.isArray(data)){
-          CACHE[m] = data;
-          localStorage.setItem('merka_'+m, JSON.stringify(data));
+          const normalized = data.map(r => normalizeRecord(m, r));
+          CACHE[m] = normalized;
         }
       } catch(e){ anyFailed = true; }
     }));
@@ -4704,10 +4719,10 @@ window.addEventListener('offline', ()=> setSyncState('offline'));
 function logoutSession(){
   if(!confirm('¿Cerrar sesión?')) return;
   session = null;
-  localStorage.removeItem('merka_session');
+  sessionStorage.removeItem('merka_session');
   // Stop polling
   if(_syncInterval) clearInterval(_syncInterval);
-  localStorage.removeItem('merka_org_id');
+  sessionStorage.removeItem('merka_org_id');
   document.getElementById('app').classList.add('hidden');
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('login-layer1').style.display = 'block';
@@ -4722,7 +4737,7 @@ function logoutSession(){
 
 // ═══ DEMO MODE RESTRICTIONS ═══
 function isDemoMode(){
-  return localStorage.getItem('merka_demo_mode') === 'true';
+  return sessionStorage.getItem('merka_demo_mode') === 'true';
 }
 
 function checkDemoVentaLimit(){ return true; }
@@ -5147,7 +5162,7 @@ async function init(){
   document.getElementById('topbarDate').textContent = todayLabel();
   updateLogoElements();
   // If org_id already stored, pre-fill
-  const storedOrg = localStorage.getItem('merka_org_id');
+  const storedOrg = sessionStorage.getItem('merka_org_id');
   if(storedOrg && document.getElementById('auth-orgid')){
     document.getElementById('auth-orgid').value = storedOrg;
     document.getElementById('auth-pass')?.focus();
