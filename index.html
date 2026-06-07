@@ -562,7 +562,8 @@ select option{background:var(--sur2);color:var(--text);}
 }
 .terminal-left{
   flex:1;display:flex;flex-direction:column;
-  border-right:1px solid var(--bdr);overflow:hidden;background:var(--bg);
+  border-right:1px solid var(--bdr);background:var(--bg);
+  min-height:0;overflow:hidden;
 }
 .terminal-search{
   padding:12px 14px;background:var(--bg2);border-bottom:1px solid var(--bdr);
@@ -601,6 +602,49 @@ select option{background:var(--sur2);color:var(--text);}
   padding:14px 12px;cursor:pointer;transition:all 0.15s;user-select:none;
   display:flex;flex-direction:column;gap:6px;
   touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+}
+
+/* ── PRODUCT IMAGE THUMBNAIL ── */
+.t-prod-img{
+  width:100%;aspect-ratio:1/1;object-fit:cover;
+  border-radius:var(--radius-sm);margin-bottom:4px;
+  background:var(--sur2);border:1px solid var(--bdr);
+  display:block;
+}
+.t-prod-img-placeholder{
+  width:100%;aspect-ratio:1/1;
+  background:var(--sur2);border:1px solid var(--bdr);
+  border-radius:var(--radius-sm);margin-bottom:4px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;opacity:0.3;
+}
+
+/* ── IMAGE UPLOADER ── */
+.img-upload-wrap{
+  position:relative;cursor:pointer;
+  border:2px dashed var(--bdr2);border-radius:var(--radius);
+  background:var(--sur2);transition:all 0.2s;
+  min-height:120px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:8px;
+  overflow:hidden;
+}
+.img-upload-wrap:hover{border-color:var(--acc-bdr);background:var(--acc-dim);}
+.img-upload-wrap input[type=file]{
+  position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;
+  border:none;background:none;min-height:unset;
+}
+.img-upload-preview{
+  width:100%;max-height:180px;object-fit:contain;
+  border-radius:var(--radius-sm);display:none;
+}
+.img-upload-icon{font-size:28px;opacity:0.4;}
+.img-upload-label{font-size:11px;color:var(--muted);font-family:var(--mono);}
+.img-upload-clear{
+  position:absolute;top:6px;right:6px;
+  width:24px;height:24px;background:var(--red);border-radius:50%;
+  display:none;align-items:center;justify-content:center;
+  color:#fff;font-size:12px;cursor:pointer;z-index:2;border:none;
+  font-weight:700;
 }
 .t-product-card:hover{
   border-color:var(--acc);
@@ -1022,21 +1066,43 @@ select option{background:var(--sur2);color:var(--text);}
   /* Main takes full width */
   .main{margin-left:0!important;}
 
-  /* Terminal: vertical stack with slide-up cart */
+  /* Terminal: vertical stack con scroll funcional */
   .terminal-layout{
-    flex-direction:column;height:calc(100vh - 53px - 68px);position:relative;
+    flex-direction:column;
+    height:calc(100dvh - 53px - 68px);
+    position:relative;
+    overflow:hidden;
   }
-  .terminal-left{flex:1;border-right:none;height:100%;overflow:hidden;}
+  .terminal-left{
+    flex:1;border-right:none;
+    display:flex;flex-direction:column;
+    min-height:0;overflow:hidden;
+  }
+  /* Search y cats fijos arriba */
+  .terminal-search{flex-shrink:0;}
+  .terminal-cats{flex-shrink:0;}
+  /* Grid con scroll vertical libre */
+  .terminal-grid{
+    flex:1;overflow-y:auto;overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;
+    align-content:start;
+  }
   .terminal-right{
     position:fixed;bottom:68px;left:0;right:0;
-    width:100%;max-height:80vh;
+    width:100%;max-height:82dvh;
     border-radius:var(--radius-xl) var(--radius-xl) 0 0;
     box-shadow:0 -12px 48px rgba(0,0,0,0.6);
     z-index:200;
     transform:translateY(100%);
     transition:transform 0.3s cubic-bezier(.4,0,.2,1);
+    display:flex;flex-direction:column;
+    overflow:hidden;
   }
   .terminal-right.cart-open{transform:translateY(0);}
+  /* Cart list con scroll interno */
+  .terminal-cart{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+  /* Checkout fijo al fondo del panel */
+  .terminal-checkout{flex-shrink:0;overflow-y:auto;max-height:50dvh;-webkit-overflow-scrolling:touch;}
 
   /* Product grid: 2 col on mobile */
   .terminal-grid{grid-template-columns:repeat(2,1fr);gap:8px;padding:10px;}
@@ -1884,14 +1950,16 @@ function renderTerminalProducts(){
     const stockLabel = sinStock ? 'Sin stock' : (esPeso ? (parseFloat(p.stock).toFixed(2)+' kg disp.') : (p.stock+' '+p.unidad));
     const priceLabel = esPeso ? fmt(p.precioVenta)+'/kg' : fmt(p.precioVenta);
     const clickFn = sinStock ? '' : (esPeso ? `openWeightPicker(${p.id})` : `addToCart(${p.id})`);
-    return `<div class="t-product-card${sinStock?' out':''}" onclick="${clickFn}">
-      ${esPeso?`<div style="position:absolute;top:8px;right:8px;font-size:9px;font-weight:700;background:var(--blue-dim);color:var(--blue);border:1px solid rgba(37,99,235,0.2);padding:2px 6px;border-radius:4px;font-family:var(--mono)">⚖ PESO</div>`:''}
+    return `<div class="t-product-card${sinStock?' out':''}" onclick="${clickFn}" style="position:relative;">
+      ${esPeso?`<div style="position:absolute;top:8px;right:8px;font-size:9px;font-weight:700;background:var(--blue-dim);color:var(--blue);border:1px solid rgba(37,99,235,0.2);padding:2px 6px;border-radius:4px;font-family:var(--mono);z-index:1">⚖ PESO</div>`:''}
+      ${p.imagen_url
+        ? `<img class="t-prod-img" src="${p.imagen_url}" alt="${p.nombre}" loading="lazy" onerror="this.style.display='none'">`
+        : `<div class="t-prod-img-placeholder">🏷</div>`}
       <div class="t-prod-name" style="padding-right:${esPeso?'36px':'0'}">${p.nombre}</div>
       <div class="t-prod-price">${priceLabel}</div>
       <div class="t-prod-stock${p.stock<(esPeso?0.5:5)?' low':''}">${stockLabel}</div>
     </div>`;
   }).join('');
-  // Need relative positioning on cards for the badge
   grid.querySelectorAll('.t-product-card').forEach(c=>c.style.position='relative');
 }
 
@@ -2354,6 +2422,20 @@ function openProductoModal(p=null){
   openModal(`
     <div class="modal-title">${p?'Editar Producto':'Nuevo Producto'}</div>
     <div class="form-grid">
+      <div class="form-group span2">
+        <label>Foto del producto</label>
+        <div class="img-upload-wrap" id="img-upload-wrap" onclick="document.getElementById('f-imagen').click()">
+          <input type="file" id="f-imagen" accept="image/*" onchange="previewImagen(this)" style="display:none">
+          ${p&&p.imagen_url
+            ? `<img class="img-upload-preview" id="img-preview" src="${p.imagen_url}" style="display:block;width:100%;max-height:180px;object-fit:contain;border-radius:var(--radius-sm);">`
+            : `<img class="img-upload-preview" id="img-preview">`}
+          <div class="img-upload-icon" id="img-upload-placeholder" ${p&&p.imagen_url?'style="display:none"':''}>📷</div>
+          <div class="img-upload-label" id="img-upload-text" ${p&&p.imagen_url?'style="display:none"':''}>Toca para subir foto</div>
+          <button class="img-upload-clear" id="img-clear-btn" ${p&&p.imagen_url?'style="display:flex"':'style="display:none"'} onclick="clearImagen(event)">✕</button>
+        </div>
+        <input type="hidden" id="f-imagen-url" value="${p&&p.imagen_url?p.imagen_url:''}">
+        <input type="hidden" id="f-imagen-base64" value="">
+      </div>
       <div class="form-group"><label>Nombre</label><input id="f-nombre" value="${p?p.nombre:''}" placeholder="Ej: Leche Entera 1L"></div>
       <div class="form-group"><label>SKU / Código de barras</label><input id="f-sku" value="${p?p.sku:''}" placeholder="LE-001 o código EAN"></div>
       <div class="form-group"><label>Precio Compra</label><input id="f-compra" type="number" value="${p?p.precioCompra:''}" placeholder="850"></div>
@@ -2393,6 +2475,33 @@ function openProductoModal(p=null){
     </div>
   `);
 }
+function previewImagen(input){
+  if(!input.files||!input.files[0]) return;
+  const file = input.files[0];
+  const reader = new FileReader();
+  reader.onload = e => {
+    const b64 = e.target.result;
+    document.getElementById('img-preview').src = b64;
+    document.getElementById('img-preview').style.display = 'block';
+    document.getElementById('img-upload-placeholder').style.display = 'none';
+    document.getElementById('img-upload-text').style.display = 'none';
+    document.getElementById('img-clear-btn').style.display = 'flex';
+    document.getElementById('f-imagen-base64').value = b64;
+    document.getElementById('f-imagen-url').value = '';
+  };
+  reader.readAsDataURL(file);
+}
+function clearImagen(e){
+  e.stopPropagation();
+  document.getElementById('img-preview').src = '';
+  document.getElementById('img-preview').style.display = 'none';
+  document.getElementById('img-upload-placeholder').style.display = '';
+  document.getElementById('img-upload-text').style.display = '';
+  document.getElementById('img-clear-btn').style.display = 'none';
+  document.getElementById('f-imagen-base64').value = '';
+  document.getElementById('f-imagen-url').value = '';
+  document.getElementById('f-imagen').value = '';
+}
 function addVolRow(){
   const div = document.createElement('div');
   div.className='vol-row';
@@ -2405,11 +2514,13 @@ function saveProducto(id, isEdit){
     desde:parseInt(r.querySelector('.vol-desde').value)||0,
     precio:parseInt(r.querySelector('.vol-precio').value)||0
   })).filter(v=>v.desde>0&&v.precio>0);
-  const prod = {id,nombre:document.getElementById('f-nombre').value.trim(),sku:document.getElementById('f-sku').value.trim(),precioCompra:parseInt(document.getElementById('f-compra').value)||0,precioVenta:parseInt(document.getElementById('f-venta').value)||0,stock:parseFloat(document.getElementById('f-stock').value)||0,unidad:document.getElementById('f-unidad').value,categoria:document.getElementById('f-cat').value,venderPorPeso:document.getElementById('f-peso').checked,volumen:vols};
+  const imagenBase64 = document.getElementById('f-imagen-base64')?.value || '';
+  const imagenUrl = document.getElementById('f-imagen-url')?.value || '';
+  const prod = {id,nombre:document.getElementById('f-nombre').value.trim(),sku:document.getElementById('f-sku').value.trim(),precioCompra:parseInt(document.getElementById('f-compra').value)||0,precioVenta:parseInt(document.getElementById('f-venta').value)||0,stock:parseFloat(document.getElementById('f-stock').value)||0,unidad:document.getElementById('f-unidad').value,categoria:document.getElementById('f-cat').value,venderPorPeso:document.getElementById('f-peso').checked,volumen:vols,imagen_url:imagenUrl,imagenBase64};
   if(!prod.nombre) return alert('Nombre obligatorio');
   let productos = DB.get('productos');
-  if(isEdit) productos = productos.map(p=>Number(p.id)===Number(id)?prod:p);
-  else productos.push(prod);
+  if(isEdit) productos = productos.map(p=>Number(p.id)===Number(id)?{...p,...prod,imagenBase64:undefined}:p);
+  else productos.push({...prod,imagenBase64:undefined});
   DB.set('productos', productos);
   DB.sync('productos', prod);
   logAudit(isEdit?'Producto editado':'Producto creado','Inventario',prod.nombre);
