@@ -1555,7 +1555,8 @@ function normalizeRecord(table, r){
     stock: parseFloat(r.stock || 0),
     unidad: r.unidad, categoria: r.categoria,
     venderPorPeso: r.vender_por_peso ?? r.venderPorPeso ?? false,
-    volumen: typeof r.volumen === 'string' ? JSON.parse(r.volumen||'[]') : (r.volumen||[])
+    volumen: typeof r.volumen === 'string' ? JSON.parse(r.volumen||'[]') : (r.volumen||[]),
+    imagen_url: r.imagen_url || null
   };
   if(table === 'cobrar') return {
     id: Number(r.id),
@@ -2430,7 +2431,10 @@ function renderInventario(search=''){
           const stockVal = p.venderPorPeso ? parseFloat(p.stock).toFixed(2)+' kg' : p.stock+' '+p.unidad;
           return `<tr>
             <td class="td-mono td-muted">${p.sku}</td>
-            <td><strong>${p.nombre}</strong></td>
+            <td><div style="display:flex;align-items:center;gap:10px;">
+              ${p.imagen_url?`<img src="${p.imagen_url}" style="width:36px;height:36px;border-radius:6px;object-fit:cover;border:1px solid var(--bdr);flex-shrink:0;" onerror="this.style.display='none'">`:''}
+              <strong>${p.nombre}</strong>
+            </div></td>
             <td style="font-size:11px"><span class="badge badge-muted">${p.categoria||'—'}</span></td>
             <td>${p.venderPorPeso?'<span class="badge badge-blue">⚖ Peso</span>':'<span class="badge badge-muted">Unidad</span>'}</td>
             <td><span class="badge ${parseFloat(p.stock)<(p.venderPorPeso?0.5:3)?'badge-red':parseFloat(p.stock)<(p.venderPorPeso?2:10)?'badge-yellow':'badge-green'}">${stockVal}</span></td>
@@ -2512,14 +2516,27 @@ function previewImagen(input){
   const file = input.files[0];
   const reader = new FileReader();
   reader.onload = e => {
-    const b64 = e.target.result;
-    document.getElementById('img-preview').src = b64;
-    document.getElementById('img-preview').style.display = 'block';
-    document.getElementById('img-upload-placeholder').style.display = 'none';
-    document.getElementById('img-upload-text').style.display = 'none';
-    document.getElementById('img-clear-btn').style.display = 'flex';
-    document.getElementById('f-imagen-base64').value = b64;
-    document.getElementById('f-imagen-url').value = '';
+    const img = new Image();
+    img.onload = () => {
+      // Comprimir a max 800px y calidad 0.7
+      const maxW = 800, maxH = 800;
+      let w = img.width, h = img.height;
+      if(w > maxW){ h = h*(maxW/w); w = maxW; }
+      if(h > maxH){ w = w*(maxH/h); h = maxH; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      const b64 = canvas.toDataURL('image/jpeg', 0.7);
+      document.getElementById('img-preview').src = b64;
+      document.getElementById('img-preview').style.display = 'block';
+      document.getElementById('img-upload-placeholder').style.display = 'none';
+      document.getElementById('img-upload-text').style.display = 'none';
+      document.getElementById('img-clear-btn').style.display = 'flex';
+      document.getElementById('f-imagen-base64').value = b64;
+      document.getElementById('f-imagen-url').value = '';
+    };
+    img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
@@ -2554,7 +2571,17 @@ function saveProducto(id, isEdit){
   if(isEdit) productos = productos.map(p=>Number(p.id)===Number(id)?{...p,...prod,imagenBase64:undefined}:p);
   else productos.push({...prod,imagenBase64:undefined});
   DB.set('productos', productos);
-  DB.sync('productos', prod);
+  // Sync con n8n y actualizar caché con respuesta (incluye imagen_url de Cloudinary)
+  DB.sync('productos', prod).then(res => {
+    if(res && Array.isArray(res) && res.length > 0){
+      const updated = normalizeRecord('productos', res[0]);
+      if(updated && updated.imagen_url){
+        let prods = DB.get('productos');
+        prods = prods.map(p => Number(p.id) === Number(updated.id) ? {...p, imagen_url: updated.imagen_url} : p);
+        DB.set('productos', prods);
+      }
+    }
+  });
   logAudit(isEdit?'Producto editado':'Producto creado','Inventario',prod.nombre);
   closeModal(); renderInventario();
 }
