@@ -1184,6 +1184,15 @@ select option{background:var(--sur2);color:var(--text);}
   .mobile-bottom-nav{display:none!important;}
   .cart-fab{display:none!important;}
   .menu-btn{display:none!important;}
+  .dash-mobile-only{display:none!important;}
+  .mobile-only-block{display:none!important;}
+}
+
+@media(max-width:768px){
+  .dash-desktop-only{display:none!important;}
+  .mobile-only-block{display:block!important;}
+  .dash-mobile-only{display:block!important;}
+  .dash-two-col{grid-template-columns:1fr!important;}
 }
 </style>
 </head>
@@ -2282,26 +2291,26 @@ function renderDashboard(){
   const gananciaNeta = totalVentasHoy - costoVentasHoy - totalGastosHoy;
 
   document.getElementById('content').innerHTML = `
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-label">Ventas hoy</div>
-        <div class="stat-val acc">${fmt(totalVentasHoy)}</div>
-        <div class="stat-sub">${ventasHoy.length} transacciones</div>
+    <!-- STATS: 2 col mobile, 4 col desktop -->
+    <div class="stats-row" style="grid-template-columns:repeat(2,1fr);">
+      <div class="stat-card" style="grid-column:1/-1;background:linear-gradient(135deg,rgba(0,212,170,0.12),rgba(0,212,170,0.04));border-color:var(--acc-bdr);">
+        <div class="stat-label">💰 Ventas hoy</div>
+        <div class="stat-val acc" style="font-size:32px;">${fmt(totalVentasHoy)}</div>
+        <div style="display:flex;gap:16px;margin-top:8px;flex-wrap:wrap;">
+          <span style="font-size:12px;color:var(--muted)">${ventasHoy.length} ventas</span>
+          <span style="font-size:12px;color:var(--green)">Efectivo: ${fmt(ventasEfectivo)}</span>
+          <span style="font-size:12px;color:var(--blue)">Transf: ${fmt(ventasTransf)}</span>
+        </div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Efectivo hoy</div>
-        <div class="stat-val green">${fmt(ventasEfectivo)}</div>
-        <div class="stat-sub">+ ${fmt(ventasTransf)} transf.</div>
+        <div class="stat-label">Ganancia neta</div>
+        <div class="stat-val ${gananciaNeta>=0?'green':'red'}">${fmt(gananciaNeta)}</div>
+        <div class="stat-sub">- costos - gastos</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Por cobrar</div>
         <div class="stat-val ${totalPendiente>0?'red':''}">${fmt(totalPendiente)}</div>
-        <div class="stat-sub">${cobrar.filter(c=>c.monto-c.pagado>0).length} cuentas pendientes</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Inventario</div>
-        <div class="stat-val">${fmt(totalInventario)}</div>
-        <div class="stat-sub">${productos.length} productos</div>
+        <div class="stat-sub">${cobrar.filter(c=>c.monto-c.pagado>0).length} pendientes</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Gastos hoy</div>
@@ -2309,68 +2318,91 @@ function renderDashboard(){
         <div class="stat-sub">${gastosHoy.length} registros</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Ganancia neta</div>
-        <div class="stat-val ${gananciaNeta>=0?'green':'red'}">${fmt(gananciaNeta)}</div>
-        <div class="stat-sub">ventas - costos - gastos</div>
-      </div>
-      <div class="stat-card">
         <div class="stat-label">Stock bajo</div>
         <div class="stat-val ${stockBajo>0?'red':'green'}">${stockBajo}</div>
         <div class="stat-sub">bajo 10 unidades</div>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+
+    <!-- ACCION RAPIDA MOBILE -->
+    <button onclick="showPage('terminal')" style="display:none;width:100%;padding:16px;background:var(--acc);color:#000;border:none;border-radius:var(--radius);font-size:16px;font-weight:800;margin-bottom:14px;cursor:pointer;" class="mobile-only-block">
+      ⚡ Ir a Terminal de Ventas
+    </button>
+
+    <!-- REPOSICION + PENDIENTES: cards en mobile, tabla en desktop -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;" class="dash-two-col">
       <div class="section-card">
         <div class="card-header">
-          <div><div class="card-title">Reposición urgente</div><div class="card-sub">Stock bajo 10 unidades</div></div>
-          <button class="btn btn-ghost btn-sm" onclick="showPage('inventario')">Ver todo →</button>
+          <div><div class="card-title">⚠ Reposición urgente</div><div class="card-sub">Stock bajo 10 unid.</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="showPage('inventario')">Ver →</button>
         </div>
-        <div class="table-wrap"><table>
-          <tr><th>Producto</th><th>Stock</th><th>P.Venta</th></tr>
-          ${productos.filter(p=>p.stock<10).map(p=>`
-            <tr><td>${p.nombre}</td>
-            <td><span class="badge ${p.stock<3?'badge-red':'badge-yellow'}">${p.stock} ${p.unidad}</span></td>
-            <td class="td-acc">${fmt(p.precioVenta)}</td></tr>
-          `).join('')||'<tr><td colspan="3" style="text-align:center;padding:20px;font-size:12px;color:var(--muted)">✓ Sin reposición urgente</td></tr>'}
-        </table></div>
+        <div>
+          ${productos.filter(p=>p.stock<10).slice(0,5).map(p=>`
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--bdr);">
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text)">${p.nombre}</div>
+                <div style="font-size:11px;color:var(--muted)">${p.unidad}</div>
+              </div>
+              <span class="badge ${p.stock<3?'badge-red':'badge-yellow'}">${p.stock}</span>
+            </div>
+          `).join('')||`<div style="padding:20px;text-align:center;font-size:12px;color:var(--muted)">✓ Sin reposición urgente</div>`}
+        </div>
       </div>
       <div class="section-card">
         <div class="card-header">
-          <div><div class="card-title">Cuentas pendientes</div><div class="card-sub">Deudas sin cobrar</div></div>
-          <button class="btn btn-ghost btn-sm" onclick="showPage('cobrar')">Ver todo →</button>
+          <div><div class="card-title">💳 Cuentas pendientes</div><div class="card-sub">Sin cobrar</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="showPage('cobrar')">Ver →</button>
         </div>
-        <div class="table-wrap"><table>
-          <tr><th>Cliente</th><th>Pendiente</th><th>Vence</th></tr>
-          ${cobrar.filter(c=>c.monto-c.pagado>0).map(c=>{
-            const cl = DB.get('clientes').find(x=>Number(x.id)===Number(c.clienteId))||{nombre:'—'};
-            const vencido = new Date(c.vencimiento)<new Date();
-            return `<tr>
-              <td>${cl.nombre}</td>
-              <td class="td-acc">${fmt(c.monto-c.pagado)}</td>
-              <td><span class="badge ${vencido?'badge-red':'badge-yellow'}">${c.vencimiento}</span></td>
-            </tr>`;
-          }).join('')||'<tr><td colspan="3" style="text-align:center;padding:20px;font-size:12px;color:var(--muted)">✓ Sin pendientes</td></tr>'}
-        </table></div>
+        <div>
+          ${cobrar.filter(c=>c.monto-c.pagado>0).slice(0,5).map(c=>{
+            const cl=DB.get('clientes').find(x=>Number(x.id)===Number(c.clienteId))||{nombre:'—'};
+            const vencido=new Date(c.vencimiento)<new Date();
+            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--bdr);">
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text)">${cl.nombre}</div>
+                <div style="font-size:11px;color:${vencido?'var(--red)':'var(--muted)'}">${c.vencimiento||'—'}</div>
+              </div>
+              <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--acc)">${fmt(c.monto-c.pagado)}</span>
+            </div>`;
+          }).join('')||`<div style="padding:20px;text-align:center;font-size:12px;color:var(--muted)">✓ Sin pendientes</div>`}
+        </div>
       </div>
     </div>
+
+    <!-- VENTAS HOY: cards en mobile -->
     <div class="section-card">
       <div class="card-header">
-        <div><div class="card-title">Ventas de hoy</div><div class="card-sub">${ventasHoy.length} transacciones · ${fmt(totalVentasHoy)}</div></div>
-        <button class="btn btn-primary btn-sm" onclick="showPage('terminal')">Ir a Terminal →</button>
+        <div><div class="card-title">Ventas de hoy</div><div class="card-sub">${ventasHoy.length} · ${fmt(totalVentasHoy)}</div></div>
+        <button class="btn btn-primary btn-sm" onclick="showPage('terminal')">Terminal →</button>
       </div>
-      <div class="table-wrap"><table>
+      <!-- Desktop: tabla -->
+      <div class="table-wrap dash-desktop-only"><table>
         <tr><th>#</th><th>Cliente</th><th>Productos</th><th>Método</th><th>Cajero</th><th>Total</th></tr>
-        ${ventasHoy.map((v,i)=>`
-          <tr>
-            <td class="td-mono td-muted">${String(i+1).padStart(2,'0')}</td>
-            <td>${v.cliente||'<span style="color:var(--muted)">—</span>'}</td>
-            <td class="td-desktop-only" style="font-size:11.5px;line-height:1.8;">${v.items.map(it=>`${it.qty}× ${it.nombre}`).join('<br>')}</td>
-            <td><span class="badge badge-muted">${v.metodo||'—'}</span></td>
-            <td class="td-muted td-desktop-only">${v.cajero||'—'}</td>
-            <td class="td-acc">${fmt(v.total)}</td>
-          </tr>
-        `).join('')||'<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);font-size:12px">Sin ventas hoy</td></tr>'}
+        ${ventasHoy.map((v,i)=>`<tr>
+          <td class="td-mono td-muted">${String(i+1).padStart(2,'0')}</td>
+          <td>${v.cliente||'<span style="color:var(--muted)">—</span>'}</td>
+          <td style="font-size:11px;line-height:1.8;">${v.items.map(it=>`${it.qty}× ${it.nombre}`).join('<br>')}</td>
+          <td><span class="badge badge-muted">${v.metodo||'—'}</span></td>
+          <td class="td-muted">${v.cajero||'—'}</td>
+          <td class="td-acc">${fmt(v.total)}</td>
+        </tr>`).join('')||'<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);font-size:12px">Sin ventas hoy</td></tr>'}
       </table></div>
+      <!-- Mobile: cards -->
+      <div class="dash-mobile-only" style="padding:8px;">
+        ${ventasHoy.length===0?`<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Sin ventas hoy</div>`:
+        ventasHoy.map((v,i)=>`
+          <div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--radius);padding:14px;margin-bottom:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+              <div>
+                <div style="font-size:13px;font-weight:700;color:var(--text)">${v.cliente||'Sin cliente'}</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:2px;">${v.cajero||''} · <span class="badge badge-muted" style="font-size:9px">${v.metodo||'—'}</span></div>
+              </div>
+              <div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--acc)">${fmt(v.total)}</div>
+            </div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.7;">${v.items.map(it=>`${it.qty}× ${it.nombre}`).join(' · ')}</div>
+          </div>
+        `).join('')}
+      </div>
     </div>
   `;
 }
@@ -2701,52 +2733,85 @@ function renderVentas(filtroFecha){
   const todasFechas = fechaFiltro ? [fechaFiltro] : [...new Set(ventas.map(v=>v.fecha))].sort((a,b)=>b.localeCompare(a));
 
   document.getElementById('content').innerHTML = `
-    <div style="display:flex;gap:10px;margin-bottom:18px;align-items:center;flex-wrap:wrap;">
-      <div class="stat-card" style="flex:1;min-width:130px;"><div class="stat-label">Total hoy</div><div class="stat-val acc">${fmt(totalHoy)}</div><div class="stat-sub">${ventasHoy.length} ventas</div></div>
-      <div class="stat-card" style="flex:1;min-width:130px;"><div class="stat-label">Efectivo</div><div class="stat-val green">${fmt(efectivo)}</div></div>
-      <div class="stat-card" style="flex:1;min-width:130px;"><div class="stat-label">Transferencia</div><div class="stat-val">${fmt(transf)}</div></div>
-      <div class="stat-card" style="flex:1;min-width:130px;"><div class="stat-label">Ticket promedio</div><div class="stat-val">${ventasHoy.length?fmt(totalHoy/ventasHoy.length):'$0'}</div></div>
-    </div>
-    <div style="display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap;">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <label style="font-size:11px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.08em;">Filtrar por fecha</label>
-        <input type="date" id="ventas-fecha-picker" value="${fechaFiltro||''}" onchange="renderVentas(this.value||null)" style="padding:7px 10px;border:1.5px solid var(--bdr);border-radius:var(--radius-sm);font-size:13px;background:var(--sur);color:var(--text);outline:none;">
+    <!-- STATS ROW -->
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px;">
+      <div class="stat-card" style="grid-column:1/-1;background:linear-gradient(135deg,rgba(0,212,170,0.1),rgba(0,212,170,0.03));border-color:var(--acc-bdr);">
+        <div class="stat-label">Total hoy</div>
+        <div class="stat-val acc" style="font-size:28px;">${fmt(totalHoy)}</div>
+        <div class="stat-sub">${ventasHoy.length} ventas</div>
       </div>
-      ${fechaFiltro?`<button class="btn btn-ghost btn-sm" onclick="window._ventasFiltroFecha=null;renderVentas(null)">✕ Ver todas</button>`:''}
-      <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        ${[...new Set(ventas.map(v=>v.fecha))].sort((a,b)=>b.localeCompare(a)).slice(0,5).map(f=>`
-          <button class="btn ${f===fechaFiltro?'btn-primary':'btn-ghost'} btn-sm" onclick="renderVentas('${f}')">${f===hoy?'Hoy':f}</button>
-        `).join('')}
-      </div>
+      <div class="stat-card"><div class="stat-label">Efectivo</div><div class="stat-val green">${fmt(efectivo)}</div></div>
+      <div class="stat-card"><div class="stat-label">Transferencia</div><div class="stat-val blue">${fmt(transf)}</div></div>
+      <div class="stat-card" style="grid-column:1/-1;"><div class="stat-label">Ticket promedio</div><div class="stat-val">${ventasHoy.length?fmt(totalHoy/ventasHoy.length):'$0'}</div></div>
     </div>
+
+    <!-- FILTROS -->
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+      <input type="date" id="ventas-fecha-picker" value="${fechaFiltro||''}" onchange="renderVentas(this.value||null)"
+        style="flex:1;min-width:130px;padding:9px 12px;border:1.5px solid var(--bdr);border-radius:var(--radius-sm);font-size:13px;background:var(--sur);color:var(--text);outline:none;">
+      ${fechaFiltro?`<button class="btn btn-ghost btn-sm" onclick="window._ventasFiltroFecha=null;renderVentas(null)">✕ Todas</button>`:''}
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">
+      ${[...new Set(ventas.map(v=>v.fecha))].sort((a,b)=>b.localeCompare(a)).slice(0,5).map(f=>`
+        <button class="btn ${f===fechaFiltro?'btn-primary':'btn-ghost'} btn-sm" onclick="renderVentas('${f}')">${f===hoy?'Hoy':f}</button>
+      `).join('')}
+    </div>
+
+    <!-- VENTAS POR DIA -->
     ${todasFechas.map(fecha=>{
       const ventasDia = ventas.filter(v=>v.fecha===fecha);
       const totalDia = ventasDia.reduce((s,v)=>s+v.total,0);
       const esHoy = fecha===hoy;
       return `<div class="section-card" style="margin-bottom:14px;">
         <div class="card-header">
-          <div><div class="card-title">${esHoy?'Hoy · ':''}<span style="font-family:var(--mono);font-size:12px">${fecha}</span></div>
-          <div class="card-sub">${ventasDia.length} ventas · <span style="color:var(--acc);font-family:var(--mono)">${fmt(totalDia)}</span></div></div>
+          <div>
+            <div class="card-title">${esHoy?'🟢 Hoy · ':''}<span style="font-family:var(--mono);font-size:12px">${fecha}</span></div>
+            <div class="card-sub">${ventasDia.length} ventas · <span style="color:var(--acc);font-family:var(--mono)">${fmt(totalDia)}</span></div>
+          </div>
         </div>
-        <div class="table-wrap"><table>
-          <tr><th>#</th><th>Cliente</th><th class="td-desktop-only">Detalle</th><th>Método</th><th class="td-desktop-only">Cajero</th><th>Total</th><th></th></tr>
+        <!-- Desktop tabla -->
+        <div class="table-wrap dash-desktop-only"><table>
+          <tr><th>#</th><th>Cliente</th><th>Detalle</th><th>Método</th><th>Cajero</th><th>Total</th><th></th></tr>
           ${ventasDia.map((v,i)=>`<tr>
             <td class="td-mono td-muted">${String(i+1).padStart(2,'0')}</td>
             <td>${v.cliente||'<span style="color:var(--muted)">—</span>'}</td>
-            <td style="font-size:11.5px;line-height:1.8;">${v.items.map(it=>`${it.qty}× ${it.nombre}`).join('<br>')}</td>
-            <td><span class="badge ${v.metodo&&v.metodo.includes('Efectivo')?'badge-green':v.metodo&&v.metodo.includes('Transferencia')?'badge-blue':v.metodo&&v.metodo.includes('Tarjeta')?'badge-blue':'badge-muted'}">${v.metodo||'—'}</span></td>
+            <td style="font-size:11px;line-height:1.8;">${v.items.map(it=>`${it.qty}× ${it.nombre}`).join('<br>')}</td>
+            <td><span class="badge ${v.metodo&&v.metodo.includes('Efectivo')?'badge-green':v.metodo&&v.metodo.includes('Transferencia')?'badge-blue':'badge-muted'}">${v.metodo||'—'}</span></td>
             <td class="td-muted">${v.cajero||'—'}</td>
             <td class="td-acc">${fmt(v.total)}</td>
             <td style="display:flex;gap:4px;">
-              <button class="btn btn-ghost btn-sm btn-icon" onclick="verDetalle('venta',${v.id})" title="Ver detalle">👁</button>
-              <button class="btn btn-ghost btn-sm btn-icon" onclick="printBoleta(${v.id})" title="Imprimir">🖨</button>
-              <button class="btn btn-danger btn-sm btn-icon" onclick="deleteVenta(${v.id})" title="Eliminar">🗑</button>
+              <button class="btn btn-ghost btn-sm btn-icon" onclick="verDetalle('venta',${v.id})">👁</button>
+              <button class="btn btn-ghost btn-sm btn-icon" onclick="printBoleta(${v.id})">🖨</button>
+              <button class="btn btn-danger btn-sm btn-icon" onclick="deleteVenta(${v.id})">🗑</button>
             </td>
           </tr>`).join('')}
         </table></div>
+        <!-- Mobile cards -->
+        <div class="dash-mobile-only" style="padding:8px;">
+          ${ventasDia.map((v,i)=>`
+            <div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--radius);padding:14px;margin-bottom:8px;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+                <div>
+                  <div style="font-size:14px;font-weight:700;color:var(--text)">${v.cliente||'Sin cliente'}</div>
+                  <div style="display:flex;gap:6px;margin-top:4px;align-items:center;flex-wrap:wrap;">
+                    <span class="badge ${v.metodo&&v.metodo.includes('Efectivo')?'badge-green':v.metodo&&v.metodo.includes('Transferencia')?'badge-blue':'badge-muted'}" style="font-size:9px;">${v.metodo||'—'}</span>
+                    <span style="font-size:11px;color:var(--muted)">${v.cajero||''}</span>
+                  </div>
+                </div>
+                <div style="font-family:var(--mono);font-size:18px;font-weight:800;color:var(--acc)">${fmt(v.total)}</div>
+              </div>
+              <div style="font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:10px;">${v.items.map(it=>`${it.qty}× ${it.nombre}`).join(' · ')}</div>
+              <div style="display:flex;gap:6px;">
+                <button class="btn btn-ghost btn-sm" style="flex:1" onclick="verDetalle('venta',${v.id})">👁 Ver</button>
+                <button class="btn btn-ghost btn-sm btn-icon" onclick="printBoleta(${v.id})">🖨</button>
+                <button class="btn btn-danger btn-sm btn-icon" onclick="deleteVenta(${v.id})">🗑</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
       </div>`;
-    }).join('')||'<div class="empty"><div class="empty-icon">◻</div><div class="empty-title">Sin ventas</div></div>'}`;
-}
+    }).join('')||'<div class="empty"><div class="empty-icon">◻</div><div class="empty-title">Sin ventas</div></div>'}
+  `;
 function deleteVenta(id){
   if(!checkPerm('eliminarVentas','No tienes permiso para eliminar ventas.')) return;
   if(!confirm('¿Eliminar venta?')) return;
