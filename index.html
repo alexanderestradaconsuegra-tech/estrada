@@ -1451,13 +1451,22 @@ const ENDPOINTS = {
   auth:          N8N + '/merka-auth',
 };
 
-const API_KEY = '29ca5e72b5b7040eb4b39532d918d743bf6a112c58418882';
+const API_KEY = '29ca5e72b5b7040eb4b39532d918d743bf6a112c58418882'; // fallback global key
+
+function getApiKey(){
+  // Use per-org key if available (set after login)
+  const key = sessionStorage.getItem('merka_api_key');
+  if(key) return key;
+  const s = sessionStorage.getItem('merka_session');
+  if(s){ try{ const p=JSON.parse(s); if(p.api_key) return p.api_key; }catch(e){} }
+  return API_KEY;
+}
 
 const API = {
   async call(endpoint, body) {
     try {
       const isAuth = endpoint.includes('merka-auth') || endpoint.includes('merka-admin');
-      const payload = isAuth ? body : { ...body, org_id: getOrgId(), _key: API_KEY };
+      const payload = isAuth ? body : { ...body, org_id: getOrgId(), _key: getApiKey() };
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
@@ -4189,6 +4198,8 @@ async function authLogin(){
       }
       sessionStorage.setItem('merka_org_id', orgId);
       ORG_ID = orgId;
+      // Store per-org api_key for authenticated requests
+      if(negocio.api_key) sessionStorage.setItem('merka_api_key', negocio.api_key);
       sessionStorage.removeItem('merka_demo_mode');
       sessionStorage.removeItem('merka_demo_ventas');
       if(negocio.demo_start) sessionStorage.setItem('merka_demo_start', negocio.demo_start);
