@@ -1073,56 +1073,43 @@ select option{background:var(--sur2);color:var(--text);}
   /* Main takes full width */
   .main{margin-left:0!important;}
 
-  /* Terminal: vertical stack con scroll funcional */
-  .terminal-layout{
-    flex-direction:column;
-    height:calc(100dvh - 53px - 68px);
-    position:relative;
-    overflow:hidden;
-  }
-  .terminal-left{
-    flex:1;border-right:none;
-    display:flex;flex-direction:column;
-    min-height:0;overflow:hidden;
-  }
-  /* Search y cats fijos arriba */
+  /* Terminal */
+  .terminal-layout{flex-direction:column;height:calc(100dvh - 53px - 68px);position:relative;overflow:hidden;}
+  .terminal-left{flex:1;border-right:none;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
   .terminal-search{flex-shrink:0;}
   .terminal-cats{flex-shrink:0;}
-  /* Grid con scroll vertical libre */
-  .terminal-grid{
-    flex:1;overflow-y:auto;overflow-x:hidden;
-    -webkit-overflow-scrolling:touch;
-    align-content:start;
-  }
-  .terminal-right{
-    position:fixed;bottom:68px;left:0;right:0;
-    width:100%;max-height:82dvh;
-    border-radius:var(--radius-xl) var(--radius-xl) 0 0;
-    box-shadow:0 -12px 48px rgba(0,0,0,0.6);
-    z-index:200;
-    transform:translateY(100%);
-    transition:transform 0.3s cubic-bezier(.4,0,.2,1);
-    display:flex;flex-direction:column;
-    overflow:hidden;
-  }
-  .terminal-right.cart-open{transform:translateY(0);}
-  /* Cart list con scroll interno */
-  .terminal-cart{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
-  /* Checkout fijo al fondo del panel */
-  .terminal-checkout{flex-shrink:0;overflow-y:auto;max-height:50dvh;-webkit-overflow-scrolling:touch;}
+  .terminal-grid{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;align-content:start;grid-template-columns:repeat(2,1fr);gap:8px;padding:10px;}
+  .t-product-card{padding:10px 8px;min-height:80px;}
+  .t-prod-name{font-size:12px;line-height:1.3;}
+  .t-prod-price{font-size:14px;}
+  .t-prod-stock{font-size:10px;}
 
-  /* Product grid: 2 col on mobile */
-  .terminal-grid{grid-template-columns:repeat(2,1fr);gap:8px;padding:10px;}
-  .t-product-card{padding:12px 10px;}
-  .t-prod-name{font-size:11.5px;}
-  .t-prod-price{font-size:13px;}
+  /* Cart sheet */
+  .terminal-right{position:fixed;bottom:68px;left:0;right:0;width:100%;max-height:85dvh;border-radius:20px 20px 0 0;box-shadow:0 -16px 48px rgba(0,0,0,0.7);z-index:200;transform:translateY(100%);transition:transform 0.32s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow:hidden;background:var(--sur);}
+  .terminal-right.cart-open{transform:translateY(0);}
+  .terminal-cart{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:8px 12px;}
+  .terminal-checkout{flex-shrink:0;padding:12px 14px;border-top:1px solid var(--bdr);overflow-y:auto;max-height:55dvh;}
+
+  /* FAB */
+  .cart-fab{bottom:84px;right:16px;width:62px;height:62px;font-size:24px;}
 
   /* Method btns */
-  .t-method-btn{font-size:10px;padding:6px 3px;}
+  .t-method-btn{font-size:10px;padding:8px 4px;min-height:40px;}
+  .t-method-row{gap:4px;}
+  .t-total-val{font-size:22px;}
+  .t-cobrar-btn{padding:14px;font-size:14px;}
 
-  /* Stats grid */
+  /* Topbar */
+  .topbar{padding:10px 14px;}
+  .topbar-title{font-size:14px;}
+
+  /* Stats */
   .stats-row{grid-template-columns:1fr 1fr;}
   .kpi-row{grid-template-columns:1fr 1fr;gap:8px;}
+  .stat-card{padding:14px;}
+  .stat-val{font-size:20px;}
+  .kpi-card{padding:13px;}
+  .kpi-val{font-size:19px;}
 
   /* Tables */
   .table-wrap{-webkit-overflow-scrolling:touch;}
@@ -1130,52 +1117,24 @@ select option{background:var(--sur2);color:var(--text);}
   th,td{padding:8px 10px;}
   .td-desktop-only{display:none!important;}
 
-  /* Modal: sheet from bottom */
-  .modal{
-    border-radius:var(--radius-xl) var(--radius-xl) 0 0;
-    position:fixed;bottom:0;left:0;right:0;
-    max-width:100%;margin:0;max-height:92vh;
-  }
+  /* Modal sheet */
+  .modal{border-radius:20px 20px 0 0;position:fixed;bottom:0;left:0;right:0;max-width:100%;margin:0;max-height:92dvh;}
   .modal-overlay{align-items:flex-end;padding:0;}
 
   /* Grids */
   .cierre-grid{grid-template-columns:1fr;}
   .cobrar-summary{grid-template-columns:1fr 1fr;}
   .form-grid{grid-template-columns:1fr;}
-
-  /* Content padding */
-  .content{padding:12px!important;}
-
-  /* Topbar compact */
-  .topbar{padding:10px 14px;}
-  .topbar-title{font-size:14px;}
-
-  /* KPI cards */
-  .kpi-card{padding:13px;}
-  .kpi-val{font-size:19px;}
-  .stat-card{padding:13px 15px;}
-  .stat-val{font-size:20px;}
-
-  /* Mixed pay */
-  .mixed-pay-label{min-width:80px;font-size:10px;}
-
-  /* Hide desktop-only nav items */
-  .nav-item[data-desktop-only]{display:none!important;}
-  .nav-section[data-desktop-only]{display:none!important;}
-
-  /* Cobrar summary */
-  .cobrar-summary{grid-template-columns:1fr 1fr;}
   .perm-grid{grid-template-columns:1fr;}
+  .dash-two-col{grid-template-columns:1fr!important;}
 
-  /* Reports */
+  /* Content & misc */
+  .content{padding:10px!important;}
+  .mixed-pay-label{min-width:80px;font-size:10px;}
   .report-tabs{gap:5px;}
   .report-tab{padding:6px 12px;font-size:11px;}
   .chart-card{padding:14px;}
-
-  /* Date picker */
   #ventas-fecha-picker{font-size:12px;padding:7px 9px;}
-
-  /* Login */
   .login-card{padding:28px 22px;}
 }
 
@@ -1371,21 +1330,25 @@ select option{background:var(--sur2);color:var(--text);}
 
   <!-- MOBILE BOTTOM NAV -->
   <div class="mobile-bottom-nav" id="mobile-bottom-nav" style="display:none">
-    <button class="mobile-nav-item active" id="mnav-ventas" onclick="mobileNav('ventas')">
+    <button class="mobile-nav-item active" id="mnav-terminal" onclick="mobileNav('terminal')">
+      <span class="m-nav-ic">⚡</span>
+      <span>Terminal</span>
+    </button>
+    <button class="mobile-nav-item" id="mnav-ventas" onclick="mobileNav('ventas')">
       <span class="m-nav-ic">📋</span>
       <span>Ventas</span>
     </button>
-    <button class="mobile-nav-item" id="mnav-reportes" onclick="mobileNav('reportes')">
-      <span class="m-nav-ic">📊</span>
-      <span>Reportes</span>
-    </button>
-    <button class="mobile-nav-item" id="mnav-cierre" onclick="mobileNav('cierre')">
-      <span class="m-nav-ic">⬫</span>
-      <span>Caja</span>
+    <button class="mobile-nav-item" id="mnav-dashboard" onclick="mobileNav('dashboard')">
+      <span class="m-nav-ic">◈</span>
+      <span>Panel</span>
     </button>
     <button class="mobile-nav-item" id="mnav-clientes" onclick="mobileNav('clientes')">
       <span class="m-nav-ic">👥</span>
       <span>Clientes</span>
+    </button>
+    <button class="mobile-nav-item" id="mnav-cierre" onclick="mobileNav('cierre')">
+      <span class="m-nav-ic">⬫</span>
+      <span>Caja</span>
     </button>
   </div>
 
@@ -1844,19 +1807,6 @@ let tMetodo = 'Efectivo';
 let tCliente = '';
 
 function renderTerminal(){
-  if(isMobile()){
-    document.getElementById('content').innerHTML = `
-      <div class="empty" style="padding:60px 24px;text-align:center;">
-        <div style="font-size:56px;margin-bottom:16px">🖥️</div>
-        <div class="empty-title" style="font-size:18px;margin-bottom:8px">Terminal solo disponible en PC</div>
-        <div class="empty-sub" style="font-size:14px;color:var(--muted);line-height:1.6;max-width:280px;margin:0 auto">
-          Para vender usa una computadora o tablet en modo horizontal.
-          En tu celular puedes ver Ventas, Reportes y Caja.
-        </div>
-        <button class="btn btn-primary" style="margin-top:24px" onclick="mobileNav('ventas')">Ver ventas del día →</button>
-      </div>`;
-    return;
-  }
   document.getElementById('topbarActions').innerHTML = `
     <span style="font-size:11px;color:var(--muted);font-family:var(--mono);" id="t-sale-count">${DB.get('ventas').filter(v=>v.fecha===today()).length} ventas hoy</span>
   `;
@@ -4040,17 +3990,14 @@ function isMobile(){ return window.innerWidth <= 768; }
 function initMobileNav(){
   const nav = document.getElementById('mobile-bottom-nav');
   if(nav) nav.style.display = isMobile() ? 'flex' : 'none';
-  if(isMobile() && currentPage === 'terminal'){
-    // Redirect terminal to ventas on mobile
-    showPage('ventas');
+  if(isMobile() && !currentPage){
+    showPage('terminal');
+    updateMobileNav('terminal');
   }
 }
 
 function mobileNav(page){
-  // Update active state
-  document.querySelectorAll('.mobile-nav-item').forEach(el=>{
-    el.classList.remove('active');
-  });
+  document.querySelectorAll('.mobile-nav-item').forEach(el=>el.classList.remove('active'));
   const activeBtn = document.getElementById('mnav-'+page);
   if(activeBtn) activeBtn.classList.add('active');
   showPage(page);
@@ -4059,11 +4006,12 @@ function mobileNav(page){
 function updateMobileNav(page){
   if(!isMobile()) return;
   document.querySelectorAll('.mobile-nav-item').forEach(el=>el.classList.remove('active'));
-  const btn = document.getElementById('mnav-'+page);
+  // Map showPage keys to nav ids
+  const map = {terminal:'terminal',ventas:'ventas',dashboard:'dashboard',clientes:'clientes',cierre:'cierre',cobrar:'clientes',reportes:'ventas'};
+  const navId = map[page] || page;
+  const btn = document.getElementById('mnav-'+navId);
   if(btn) btn.classList.add('active');
 }
-
-window.addEventListener('resize', initMobileNav);
 
 // ═══ MOBILE CART ═══
 function isMobile(){ return window.innerWidth <= 768; }
@@ -4120,6 +4068,28 @@ window.addEventListener('resize', ()=>{
   if(fab) fab.style.display = (isMobile() && currentPage==='terminal') ? 'flex' : 'none';
   if(!isMobile()) closeCartMobile();
   initMobileNav();
+});
+
+// ═══ PWA ═══
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  });
+}
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstall = e;
+  if(window.innerWidth <= 768){
+    const existing = document.getElementById('pwa-install-btn');
+    if(existing) return;
+    const btn = document.createElement('button');
+    btn.id = 'pwa-install-btn';
+    btn.innerHTML = '📲 Instalar app';
+    btn.style.cssText = 'position:fixed;top:10px;right:10px;z-index:9998;background:var(--acc);color:#000;border:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;font-family:var(--sans);cursor:pointer;box-shadow:0 4px 16px rgba(0,212,170,0.4);';
+    btn.onclick = () => { deferredInstall.prompt(); deferredInstall.userChoice.then(()=>btn.remove()); };
+    document.body.appendChild(btn);
+  }
 });
 
 
@@ -5499,7 +5469,7 @@ async function agenteEnviarTexto(texto, etiqueta){
       })
     });
     const data = await res.json();
-    const respuesta = data?.respuesta || data?.output || data?.message || 'Sin respuesta.';
+    const respuesta = data?.data?.[0]?.output || data?.respuesta || data?.output || data?.message || 'Sin respuesta.';
     document.getElementById('agente-typing')?.remove();
     agenteAddMessage('assistant', respuesta);
     agenteChatHistory.push({role:'assistant', content: respuesta});
@@ -5585,7 +5555,7 @@ DATOS DEL NEGOCIO (${new Date().toLocaleDateString('es-CL')}):
     });
 
     const data = await res.json();
-    const respuesta = data?.respuesta || data?.message || data?.content || 'No pude procesar la consulta.';
+    const respuesta = data?.data?.[0]?.output || data?.respuesta || data?.message || data?.content || 'No pude procesar la consulta.';
 
     document.getElementById('agente-typing')?.remove();
     agenteAddMessage('assistant', respuesta);
