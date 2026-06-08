@@ -1111,11 +1111,15 @@ select option{background:var(--sur2);color:var(--text);}
   .kpi-card{padding:13px;}
   .kpi-val{font-size:19px;}
 
-  /* Tables */
-  .table-wrap{-webkit-overflow-scrolling:touch;}
-  table{font-size:11px;}
-  th,td{padding:8px 10px;}
-  .td-desktop-only{display:none!important;}
+  .terminal-cats{flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;}
+  .t-cat{flex-shrink:0;}
+
+  /* Tables — horizontal scroll on mobile */
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;}
+  table{min-width:500px;}
+
+  /* Cierre — vertical scroll */
+  .content{overflow-y:auto;-webkit-overflow-scrolling:touch;}
 
   /* Modal sheet */
   .modal{border-radius:20px 20px 0 0;position:fixed;bottom:0;left:0;right:0;max-width:100%;margin:0;max-height:92dvh;}
@@ -1300,7 +1304,7 @@ select option{background:var(--sur2);color:var(--text);}
       <div class="nav-section">Análisis</div>
       <div class="nav-item" onclick="showPage('reportes')"><span class="nav-ic">◈</span>Reportes</div>
       <div class="nav-item" onclick="openExportModal()" style="color:var(--muted);"><span class="nav-ic">📥</span>Exportar / Importar</div>
-      <div class="nav-item" onclick="showPage('agente')" style="color:#a78bfa;" id="nav-agente"><span class="nav-ic">✦</span>Agente IA</div>
+      <div class="nav-item" onclick="showPage('agente')" style="display:none;" id="nav-agente"><span class="nav-ic">✦</span>Agente IA</div>
       <div class="nav-section" data-desktop-only="1">Sistema</div>
       <div class="nav-item" data-desktop-only="1" onclick="showPage('auditoria')" id="nav-auditoria"><span class="nav-ic">◷</span>Auditoría</div>
       <div class="nav-item" data-desktop-only="1" onclick="showPage('configuracion')"><span class="nav-ic">⊞</span>Configuración</div>
@@ -2969,6 +2973,7 @@ function renderCierre(){
   const aperturaActiva = aperturas.find(a=>a.fecha===hoy&&a.activa);
 
   document.getElementById('content').innerHTML = `
+    <div style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:80px;">
     <div class="cierre-grid">
       <div class="cierre-block">
         <div class="cierre-block-title">Resumen del día · ${hoy}</div>
@@ -3044,7 +3049,7 @@ function renderCierre(){
         </tr>`).join('')}
       </table></div>
     </div>` : ''}
-  `;
+  </div>`;
 }
 function abrirTurno(){
   if(!checkPerm('abrirCaja')) return;
@@ -5171,8 +5176,8 @@ async function syncAll(showFeedback=false){
     setSyncState(anyFailed ? 'error' : 'ok');
     if(showFeedback) showToast(anyFailed ? 'Sync parcial — revisa conexión' : '✓ Datos actualizados', anyFailed ? 'error' : 'success');
     // Refresh current page after sync
-    if(currentPage && currentPage !== 'terminal'){
-      const pages = {dashboard:renderDashboard,inventario:renderInventario,ventas:renderVentas,clientes:renderClientes,proveedores:renderProveedores,pagar:renderPagar,gastos:renderGastos,cierre:renderCierre,reportes:renderReportes,auditoria:renderAuditoria,calendario:renderCalendario};
+    if(currentPage){
+      const pages = {terminal:renderTerminalProducts,dashboard:renderDashboard,inventario:renderInventario,ventas:renderVentas,clientes:renderClientes,proveedores:renderProveedores,pagar:renderPagar,gastos:renderGastos,cierre:renderCierre,reportes:renderReportes,auditoria:renderAuditoria,calendario:renderCalendario};
       if(pages[currentPage]) pages[currentPage]();
     }
   } catch(e){
