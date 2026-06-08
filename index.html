@@ -1451,12 +1451,13 @@ const ENDPOINTS = {
   auth:          N8N + '/merka-auth',
 };
 
+const API_KEY = '29ca5e72b5b7040eb4b39532d918d743bf6a112c58418882';
+
 const API = {
   async call(endpoint, body) {
     try {
-      // Don't override org_id for auth calls — it comes from user input
       const isAuth = endpoint.includes('merka-auth') || endpoint.includes('merka-admin');
-      const payload = isAuth ? body : { ...body, org_id: getOrgId() };
+      const payload = isAuth ? body : { ...body, org_id: getOrgId(), _key: API_KEY };
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
