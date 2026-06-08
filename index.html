@@ -2812,6 +2812,7 @@ function renderVentas(filtroFecha){
       </div>`;
     }).join('')||'<div class="empty"><div class="empty-icon">◻</div><div class="empty-title">Sin ventas</div></div>'}
   `;
+}
 function deleteVenta(id){
   if(!checkPerm('eliminarVentas','No tienes permiso para eliminar ventas.')) return;
   if(!confirm('¿Eliminar venta?')) return;
