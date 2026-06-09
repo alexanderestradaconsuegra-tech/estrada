@@ -1079,13 +1079,13 @@ select option{background:var(--sur2);color:var(--text);}
   .terminal-left{flex:1;border-right:none;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
   .terminal-search{flex-shrink:0;}
   .terminal-cats{flex-shrink:0;}
-  .terminal-grid{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;align-content:start;grid-template-columns:repeat(2,1fr);gap:6px;padding:8px;width:100%;box-sizing:border-box;}
-  .t-product-card{padding:8px;min-height:unset;}
-  .t-prod-img{aspect-ratio:4/3 !important;}
-  .t-prod-img-placeholder{aspect-ratio:4/3 !important;}
-  .t-prod-name{font-size:11px;line-height:1.3;}
-  .t-prod-price{font-size:13px;}
-  .t-prod-stock{font-size:10px;}
+  .terminal-grid{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;align-content:start;grid-template-columns:repeat(2,1fr);gap:5px;padding:6px;width:100%;box-sizing:border-box;}
+  .t-product-card{padding:6px;min-height:unset;gap:3px;}
+  .t-prod-img{aspect-ratio:3/2 !important;border-radius:5px;}
+  .t-prod-img-placeholder{aspect-ratio:3/2 !important;border-radius:5px;font-size:16px;}
+  .t-prod-name{font-size:10.5px;line-height:1.2;}
+  .t-prod-price{font-size:12px;}
+  .t-prod-stock{font-size:9.5px;}
 
   /* Cart sheet */
   .terminal-right{position:fixed;bottom:68px;left:0;right:0;width:100%;max-height:85dvh;border-radius:20px 20px 0 0;box-shadow:0 -16px 48px rgba(0,0,0,0.7);z-index:200;transform:translateY(100%);transition:transform 0.32s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow:hidden;background:var(--sur);pointer-events:none;}
@@ -2244,6 +2244,27 @@ function cobrarVenta(){
 }
 
 function showSuccessFlash(total, metodo, ventaId){
+  if(isMobile()){
+    // Mobile: show as full overlay modal with big buttons
+    closeCartMobile();
+    const overlay = document.createElement('div');
+    overlay.id = 'success-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(5,11,20,0.96);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:32px;';
+    overlay.innerHTML = `
+      <div style="font-size:72px;animation:successBounce 0.5s cubic-bezier(.175,.885,.32,1.275)">✅</div>
+      <div style="font-family:var(--mono);font-size:42px;font-weight:800;color:var(--acc);letter-spacing:-2px;">${fmt(total)}</div>
+      <div style="font-size:16px;font-weight:700;color:var(--text)">Venta registrada</div>
+      <div style="font-size:13px;font-family:var(--mono);color:var(--muted)">${metodo}</div>
+      <div style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:280px;margin-top:8px;">
+        ${ventaId?`<button onclick="printBoleta(${ventaId})" style="padding:16px;background:var(--acc);color:#000;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;font-family:var(--sans);width:100%">🖨 Ver boleta</button>`:''}
+        ${ventaId?`<button onclick="shareBoletaMobile(${ventaId})" style="padding:16px;background:#25d366;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;font-family:var(--sans);width:100%">💬 Compartir boleta</button>`:''}
+        <button onclick="document.getElementById('success-overlay').remove()" style="padding:14px;background:var(--sur2);color:var(--text);border:1.5px solid var(--bdr2);border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--sans);width:100%">✕ Nueva venta</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    return;
+  }
+  // Desktop: show inside cart panel as before
   const right = document.querySelector('.terminal-right');
   if(!right) return;
   const flash = document.createElement('div');
@@ -2260,6 +2281,34 @@ function showSuccessFlash(total, metodo, ventaId){
   `;
   right.appendChild(flash);
   setTimeout(()=>{ if(flash.parentNode) flash.parentNode.removeChild(flash); }, 3500);
+}
+
+function shareBoletaMobile(ventaId){
+  // Generate boleta text for sharing
+  const venta = DB.get('ventas').find(v=>Number(v.id)===Number(ventaId));
+  if(!venta) return;
+  const cfg = DB.get('config') || {};
+  const lines = [
+    `🧾 *${cfg.nombre||'Minimarket'}*`,
+    `📅 ${venta.fecha} ${venta.hora||''}`,
+    `─────────────────`,
+    ...venta.items.map(it=>`${it.qty}× ${it.nombre}  ${fmt(it.subtotal)}`),
+    `─────────────────`,
+    `*TOTAL: ${fmt(venta.total)}*`,
+    `Método: ${venta.metodo||'—'}`,
+    ``,
+    `Gracias por su compra 🙏`
+  ].join('\n');
+
+  if(navigator.share){
+    navigator.share({ title:'Boleta de venta', text: lines })
+      .catch(()=>{});
+  } else {
+    // Fallback: WhatsApp direct
+    const url = `https://wa.me/?text=${encodeURIComponent(lines)}`;
+    window.open(url, '_blank');
+  }
+  document.getElementById('success-overlay')?.remove();
 }
 
 // ═══ DASHBOARD ═══
