@@ -669,6 +669,7 @@ select option{background:var(--sur2);color:var(--text);}
 .terminal-right{
   width:340px;flex-shrink:0;display:flex;flex-direction:column;
   background:var(--sur);border-left:1px solid var(--bdr);
+  position:relative;
 }
 .terminal-header{
   padding:14px 16px;border-bottom:1px solid var(--bdr);
@@ -1852,7 +1853,7 @@ function renderTerminal(){
         <div class="cart-fab-badge" id="cart-fab-badge" style="display:none">0</div>
       </button>
       <!-- RIGHT: carrito -->
-      <div class="terminal-right" id="terminal-right" style="position:relative">
+      <div class="terminal-right" id="terminal-right">
         <div class="cart-drag-handle" onclick="closeCartMobile()"><div class="cart-drag-bar"></div></div>
         <div class="terminal-header">
           <div class="terminal-header-title">Carrito</div>
@@ -1931,6 +1932,14 @@ function renderTerminalProducts(){
   if(tCat !== 'Todos') filtered = filtered.filter(p=>(p.categoria||'General')===tCat);
   const grid = document.getElementById('t-grid');
   if(!grid) return;
+
+  // If no products at all, show loading and trigger sync
+  if(!productos.length && !_syncPending){
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--muted)"><div style="font-size:32px;margin-bottom:10px;opacity:0.4">⟳</div><div style="font-size:13px">Cargando productos...</div></div>`;
+    syncAll().then(()=>renderTerminalProducts());
+    return;
+  }
+
   if(!filtered.length){
     grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--muted)"><div style="font-size:32px;margin-bottom:10px;opacity:0.4">🔍</div><div style="font-size:13px">Sin resultados</div></div>`;
     return;
@@ -4034,6 +4043,8 @@ function isMobile(){ return window.innerWidth <= 768; }
 function initMobileCart(){
   const fab = document.getElementById('cart-fab');
   if(fab) fab.style.display = (isMobile() && currentPage==='terminal') ? 'flex' : 'none';
+  // Always start with cart closed on mobile
+  if(isMobile()) closeCartMobile();
 }
 
 
