@@ -1079,15 +1079,17 @@ select option{background:var(--sur2);color:var(--text);}
   .terminal-left{flex:1;border-right:none;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
   .terminal-search{flex-shrink:0;}
   .terminal-cats{flex-shrink:0;}
-  .terminal-grid{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;align-content:start;grid-template-columns:repeat(2,1fr);gap:8px;padding:10px;}
-  .t-product-card{padding:10px 8px;min-height:80px;}
-  .t-prod-name{font-size:12px;line-height:1.3;}
-  .t-prod-price{font-size:14px;}
+  .terminal-grid{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;align-content:start;grid-template-columns:repeat(2,1fr);gap:6px;padding:8px;width:100%;box-sizing:border-box;}
+  .t-product-card{padding:8px;min-height:unset;}
+  .t-prod-img{aspect-ratio:4/3 !important;}
+  .t-prod-img-placeholder{aspect-ratio:4/3 !important;}
+  .t-prod-name{font-size:11px;line-height:1.3;}
+  .t-prod-price{font-size:13px;}
   .t-prod-stock{font-size:10px;}
 
   /* Cart sheet */
-  .terminal-right{position:fixed;bottom:68px;left:0;right:0;width:100%;max-height:85dvh;border-radius:20px 20px 0 0;box-shadow:0 -16px 48px rgba(0,0,0,0.7);z-index:200;transform:translateY(100%);transition:transform 0.32s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow:hidden;background:var(--sur);}
-  .terminal-right.cart-open{transform:translateY(0);}
+  .terminal-right{position:fixed;bottom:68px;left:0;right:0;width:100%;max-height:85dvh;border-radius:20px 20px 0 0;box-shadow:0 -16px 48px rgba(0,0,0,0.7);z-index:200;transform:translateY(100%);transition:transform 0.32s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow:hidden;background:var(--sur);pointer-events:none;}
+  .terminal-right.cart-open{transform:translateY(0);pointer-events:all;}
   .terminal-cart{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:8px 12px;}
   .terminal-checkout{flex-shrink:0;padding:12px 14px;border-top:1px solid var(--bdr);overflow-y:auto;max-height:55dvh;}
 
