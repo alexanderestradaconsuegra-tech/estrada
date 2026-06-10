@@ -1460,7 +1460,7 @@ select option{background:var(--sur2);color:var(--text);}
 </div>
 
 <!-- TRIAL EXPIRED SCREEN -->
-<div class="trial-screen hidden" id="trialScreen">
+<div class="trial-screen" id="trialScreen" style="display:none">
   <div class="trial-card">
     <div style="font-size:56px;margin-bottom:16px;">⏰</div>
     <h2 style="font-family:var(--sans);font-size:24px;font-weight:800;color:var(--text);margin-bottom:10px;letter-spacing:-0.5px;">Tu período de prueba terminó</h2>
@@ -4397,10 +4397,9 @@ function checkTrialExpired(negocio){
 }
 
 function showTrialExpired(){
-  // Hide login, hide app — show trial screen
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').classList.add('hidden');
-  document.getElementById('trialScreen').classList.remove('hidden');
+  document.getElementById('trialScreen').style.display = 'flex';
 }
 
 function goToPayment(){
@@ -5921,7 +5920,7 @@ async function loadAgenteInsights(){
 async function init(){
   initTheme();
   // Always hide trial screen on load — only shown after failed login
-  document.getElementById('trialScreen')?.classList.add('hidden');
+  document.getElementById('trialScreen').style.display = 'none';
   initSampleData();
   // Load from n8n first, fallback to localStorage
   // Load config and usuarios first (needed before login screen)
