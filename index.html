@@ -1450,9 +1450,10 @@ select option{background:var(--sur2);color:var(--text);}
           <div class="topbar-date" id="topbarDate"></div>
         </div>
       </div>
-      <div class="topbar-actions" id="topbarActions">
-        <button class="btn btn-ghost btn-sm" id="theme-toggle-btn" onclick="toggleTheme()" title="Cambiar tema" style="font-size:16px;padding:6px 8px;">☀️</button>
-        <button class="btn btn-ghost btn-sm" onclick="openExportModal()">📥 Exportar</button>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <button id="theme-toggle-btn" onclick="toggleTheme()" title="Cambiar tema"
+          style="background:var(--sur2);border:1px solid var(--bdr2);border-radius:8px;padding:6px 9px;font-size:15px;cursor:pointer;line-height:1;color:var(--text);">☀️</button>
+        <div class="topbar-actions" id="topbarActions"></div>
       </div>
     </div>
     <div class="content" id="content" style="padding:0"></div>
@@ -1769,9 +1770,10 @@ async function doLogin(){
   document.getElementById('app').classList.remove('hidden');
   updateSessionUI();
   startPolling();
-  // Cargar todos los datos desde n8n antes de mostrar el terminal
-  await syncAll();
+  // Mostrar terminal primero, luego cargar datos y re-renderizar
   showPage('terminal');
+  await syncAll();
+  renderTerminalProducts();
   setTimeout(checkDemo, 1000);
   setTimeout(initMobileNav, 100);
 }
