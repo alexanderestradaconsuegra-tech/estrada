@@ -88,6 +88,52 @@
 }
 
 html{font-size:14px;color-scheme:dark;}
+
+/* ── LIGHT THEME ── */
+[data-theme="light"]{
+  --bg:#f0f4f8;
+  --bg2:#e8edf5;
+  --sur:#ffffff;
+  --sur2:#f4f7fc;
+  --sur3:#eaeff7;
+  --bdr:rgba(0,0,0,0.08);
+  --bdr2:rgba(0,0,0,0.13);
+  --text:#0f172a;
+  --text2:#334155;
+  --muted:#64748b;
+  --dim:#cbd5e1;
+  --sb:#1e293b;
+  --sb-bdr:rgba(255,255,255,0.06);
+  --sb-text:#e2e8f8;
+  --sb-muted:#64748b;
+  --sb-active-bg:rgba(0,212,170,0.12);
+  --sb-active-bdr:rgba(0,212,170,0.35);
+  --shadow:0 4px 20px rgba(0,0,0,0.1);
+  --shadow-sm:0 2px 8px rgba(0,0,0,0.07);
+  --shadow-lg:0 16px 48px rgba(0,0,0,0.15);
+  color-scheme:light;
+}
+[data-theme="light"] .topbar{background:var(--sur);border-bottom:1px solid var(--bdr);}
+[data-theme="light"] .t-product-card{background:var(--sur2);}
+[data-theme="light"] .stat-card,[data-theme="light"] .kpi-card{background:var(--sur);}
+[data-theme="light"] .login-screen,[data-theme="light"] .setup-screen{background:linear-gradient(135deg,#e8edf5,#f0f4f8);}
+
+/* ── TRIAL EXPIRED SCREEN ── */
+.trial-screen{
+  position:fixed;inset:0;z-index:9999;
+  background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+}
+.trial-card{
+  background:var(--sur);
+  border:1px solid var(--bdr2);
+  border-radius:var(--radius-xl);
+  padding:48px 40px;
+  max-width:460px;width:100%;
+  text-align:center;
+  box-shadow:var(--shadow-lg);
+}
 body{
   background:var(--bg);color:var(--text);
   font-family:var(--sans);min-height:100vh;
@@ -1373,10 +1419,27 @@ select option{background:var(--sur2);color:var(--text);}
         </div>
       </div>
       <div class="topbar-actions" id="topbarActions">
+        <button class="btn btn-ghost btn-sm" id="theme-toggle-btn" onclick="toggleTheme()" title="Cambiar tema" style="font-size:16px;padding:6px 8px;">☀️</button>
         <button class="btn btn-ghost btn-sm" onclick="openExportModal()">📥 Exportar</button>
       </div>
     </div>
     <div class="content" id="content" style="padding:0"></div>
+  </div>
+</div>
+
+<!-- TRIAL EXPIRED SCREEN -->
+<div class="trial-screen hidden" id="trialScreen">
+  <div class="trial-card">
+    <div style="font-size:56px;margin-bottom:16px;">⏰</div>
+    <h2 style="font-family:var(--sans);font-size:24px;font-weight:800;color:var(--text);margin-bottom:10px;letter-spacing:-0.5px;">Tu período de prueba terminó</h2>
+    <p style="font-size:14px;color:var(--muted);line-height:1.7;margin-bottom:28px;">Activa tu plan para seguir usando Merka POS con todos tus datos.</p>
+    <div style="background:var(--sur2);border:1px solid var(--bdr2);border-radius:14px;padding:20px;margin-bottom:28px;">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);font-family:var(--mono);letter-spacing:0.1em;margin-bottom:6px;">MERKA POS</div>
+      <div style="font-size:42px;font-weight:800;color:var(--acc);font-family:var(--sans);letter-spacing:-2px;line-height:1;">US$9.99<span style="font-size:16px;font-weight:400;color:var(--muted);">/mes</span></div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px;">Plan anual · US$12/mes si pagas mensual</div>
+    </div>
+    <button onclick="goToPayment()" class="btn btn-primary btn-lg" style="width:100%;margin-bottom:12px;font-size:15px;">⚡ Activar mi plan →</button>
+    <button onclick="logout()" class="btn btn-ghost btn-sm" style="width:100%;color:var(--muted);">Cerrar sesión</button>
   </div>
 </div>
 
@@ -1948,13 +2011,12 @@ function renderTerminalProducts(){
     grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--muted)"><div style="font-size:32px;margin-bottom:10px;opacity:0.4">🔍</div><div style="font-size:13px">Sin resultados</div></div>`;
     return;
   }
-  grid.innerHTML = filtered.map(p=>{
-    const sinStock = p.stock===0||p.stock<=0;
+  grid.innerHTML = filtered.map(p=>{    const sinStock = p.stock===0||p.stock<=0;
     const esPeso = !!p.venderPorPeso;
     const stockLabel = sinStock ? 'Sin stock' : (esPeso ? (parseFloat(p.stock).toFixed(2)+' kg disp.') : (p.stock+' '+p.unidad));
     const priceLabel = esPeso ? fmt(p.precioVenta)+'/kg' : fmt(p.precioVenta);
     const clickFn = sinStock ? '' : (esPeso ? `openWeightPicker(${p.id})` : `addToCart(${p.id})`);
-    return `<div class="t-product-card${sinStock?' out':''}" onclick="${clickFn}" style="position:relative;">
+    return `<div class="t-product-card${sinStock?' out':''}" data-prod-id="${p.id}" onclick="${clickFn}" style="position:relative;">
       ${esPeso?`<div style="position:absolute;top:8px;right:8px;font-size:9px;font-weight:700;background:var(--blue-dim);color:var(--blue);border:1px solid rgba(37,99,235,0.2);padding:2px 6px;border-radius:4px;font-family:var(--mono);z-index:1">⚖ PESO</div>`:''}
       ${p.imagen_url
         ? `<img class="t-prod-img" src="${p.imagen_url}" alt="${p.nombre}" loading="lazy" onerror="this.style.display='none'">`
@@ -4237,6 +4299,52 @@ function enterDemoMode(){
   document.body.appendChild(banner);
 }
 
+// ═══ THEME ═══
+function initTheme(){
+  const saved = localStorage.getItem('merka_theme') || 'dark';
+  applyTheme(saved);
+}
+function applyTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : '');
+  document.documentElement.style.colorScheme = theme;
+  const btn = document.getElementById('theme-toggle-btn');
+  if(btn) btn.textContent = theme === 'light' ? '🌙' : '☀️';
+  localStorage.setItem('merka_theme', theme);
+}
+function toggleTheme(){
+  const current = localStorage.getItem('merka_theme') || 'dark';
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+}
+
+// ═══ TRIAL CHECK ═══
+function checkTrialExpired(negocio){
+  if(negocio.payment_status === 'paid') return false;
+  if(negocio.trial_expired === true || negocio.trial_expired === 'true') return true;
+  if(negocio.trial_end){
+    const end = new Date(negocio.trial_end);
+    if(end < new Date()) return true;
+  }
+  return false;
+}
+
+function showTrialExpired(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('trialScreen').classList.remove('hidden');
+}
+
+function goToPayment(){
+  // Replace with actual MercadoPago link when ready
+  window.open('https://merkapos.pro/#pricing', '_blank');
+}
+
+// ═══ BARCODE SCANNER ═══
+// Implementation is in initBarcodeListener() below — this section removed to avoid duplicates
+
+function showBarcodeToast(msg, isError=false){
+  showToast(msg, isError ? 'error' : 'success');
+}
+
 async function authLogin(){
   const orgId = document.getElementById('auth-orgid')?.value.trim();
   const pass = document.getElementById('auth-pass')?.value;
@@ -4252,6 +4360,14 @@ async function authLogin(){
     const resData = Array.isArray(res) ? res[0] : (res?.data || res);
     if(resData && (resData.found === true || resData.org_id)){
       const negocio = resData;
+
+      // Check trial expired BEFORE showing the system
+      if(checkTrialExpired(negocio)){
+        sessionStorage.setItem('merka_org_id', orgId);
+        ORG_ID = orgId;
+        showTrialExpired();
+        return;
+      }
       // Clear previous org cache if different org
       const prevOrg = sessionStorage.getItem('merka_org_id');
       if(prevOrg !== orgId){
@@ -5717,6 +5833,7 @@ async function loadAgenteInsights(){
 
 // ═══ INIT ═══
 async function init(){
+  initTheme();
   initSampleData();
   // Load from n8n first, fallback to localStorage
   // Load config and usuarios first (needed before login screen)
