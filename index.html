@@ -1532,6 +1532,22 @@ select option{background:var(--sur2);color:var(--text);}
 // ═══ CONFIG ═══
 const N8N = 'https://n8n-n8n.fa2cjf.easypanel.host/webhook';
 
+// ═══ SEGURIDAD: escape de HTML ═══
+// Todo dato que viene del backend (nombre de producto, cliente, usuario...)
+// se renderiza con innerHTML en varias partes del código. Sin esto, un
+// nombre como <img src=x onerror=...> se ejecuta como XSS apenas alguien
+// ve ese producto/cliente/usuario — incluyendo la pantalla de login, que
+// se ve SIN estar autenticado.
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // ═══ ORG_ID — Identificador único de este negocio ═══
 // Cambiar este valor por un ID único para cada cliente
 // Ejemplo: 'negocio-juan-2026' o 'minimarket-santiago-001'
@@ -1733,10 +1749,10 @@ function renderLoginCashiers(targetId, onSelect){
   const el = document.getElementById(targetId);
   el.innerHTML = usuarios.map(u=>`
     <button class="cashier-btn" id="cb-${targetId}-${u.id}" onclick="${onSelect}(${u.id})">
-      <div class="cashier-avatar ${getColor(u.id)}">${getInitials(u.nombre)}</div>
+      <div class="cashier-avatar ${getColor(u.id)}">${escapeHtml(getInitials(u.nombre))}</div>
       <div class="cashier-info">
-        <div class="c-name">${u.nombre}</div>
-        <div class="c-role">${u.rol}</div>
+        <div class="c-name">${escapeHtml(u.nombre)}</div>
+        <div class="c-role">${escapeHtml(u.rol)}</div>
       </div>
     </button>
   `).join('');
@@ -2047,15 +2063,15 @@ function renderTerminalProducts(){
   }
   grid.innerHTML = filtered.map(p=>{    const sinStock = p.stock===0||p.stock<=0;
     const esPeso = !!p.venderPorPeso;
-    const stockLabel = sinStock ? 'Sin stock' : (esPeso ? (parseFloat(p.stock).toFixed(2)+' kg disp.') : (p.stock+' '+p.unidad));
+    const stockLabel = sinStock ? 'Sin stock' : (esPeso ? (parseFloat(p.stock).toFixed(2)+' kg disp.') : (p.stock+' '+escapeHtml(p.unidad)));
     const priceLabel = esPeso ? fmt(p.precioVenta)+'/kg' : fmt(p.precioVenta);
     const clickFn = sinStock ? '' : (esPeso ? `openWeightPicker(${p.id})` : `addToCart(${p.id})`);
     return `<div class="t-product-card${sinStock?' out':''}" data-prod-id="${p.id}" onclick="${clickFn}" style="position:relative;">
       ${esPeso?`<div style="position:absolute;top:8px;right:8px;font-size:9px;font-weight:700;background:var(--blue-dim);color:var(--blue);border:1px solid rgba(37,99,235,0.2);padding:2px 6px;border-radius:4px;font-family:var(--mono);z-index:1">⚖ PESO</div>`:''}
       ${p.imagen_url
-        ? `<img class="t-prod-img" src="${p.imagen_url}" alt="${p.nombre}" loading="lazy" onerror="this.style.display='none'">`
+        ? `<img class="t-prod-img" src="${escapeHtml(p.imagen_url)}" alt="${escapeHtml(p.nombre)}" loading="lazy" onerror="this.style.display='none'">`
         : `<div class="t-prod-img-placeholder">🏷</div>`}
-      <div class="t-prod-name" style="padding-right:${esPeso?'36px':'0'}">${p.nombre}</div>
+      <div class="t-prod-name" style="padding-right:${esPeso?'36px':'0'}">${escapeHtml(p.nombre)}</div>
       <div class="t-prod-price">${priceLabel}</div>
       <div class="t-prod-stock${p.stock<(esPeso?0.5:5)?' low':''}">${stockLabel}</div>
     </div>`;
@@ -2216,7 +2232,7 @@ function renderCart(){
     if(item.esPeso){
       return `<div class="t-cart-item">
         <div class="t-cart-item-info">
-          <div class="t-cart-item-name">${item.nombre}</div>
+          <div class="t-cart-item-name">${escapeHtml(item.nombre)}</div>
           <div class="t-cart-item-price" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
             <span style="background:var(--blue-dim);color:var(--blue);padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;font-family:var(--mono)">⚖ ${item.qtyLabel}</span>
             <span id="price-display-${item.cartId}" class="t-precio-editable" onclick="editPrecio(${item.cartId})" title="Click para editar precio">
@@ -2232,7 +2248,7 @@ function renderCart(){
     }
     return `<div class="t-cart-item">
       <div class="t-cart-item-info">
-        <div class="t-cart-item-name">${item.nombre}</div>
+        <div class="t-cart-item-name">${escapeHtml(item.nombre)}</div>
         <div class="t-cart-item-price" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
           <span id="price-display-${item.cartId}" class="t-precio-editable" onclick="editPrecio(${item.cartId})" title="Click para editar precio">
             <span class="t-precio-val">${fmt(item.precio)}</span>
@@ -4096,7 +4112,7 @@ function openDescuentoModal(cartId){
   if(!item) return;
   const precioBase = item.precioOriginal || item.precio;
   openModal(`
-    <div class="modal-title">% Descuento — ${item.nombre}</div>
+    <div class="modal-title">% Descuento — ${escapeHtml(item.nombre)}</div>
     <div style="text-align:center;margin-bottom:20px;">
       <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Precio base</div>
       <div style="font-family:var(--mono);font-size:24px;font-weight:700;color:var(--text)">${fmt(precioBase)}</div>

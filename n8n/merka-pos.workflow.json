@@ -1,0 +1,4897 @@
+{
+  "name": "merka_pos",
+  "nodes": [
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "getAll",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "cf22a78e-eab9-4350-8a51-e1619267e937"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "getAll"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "06dc219e-495f-4900-b9a7-9f870244248e",
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "save",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "save"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2976,
+        13536
+      ],
+      "id": "f51fa585-6006-40bf-9f2c-13e5ef233614",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM ventas WHERE org_id = $1 ORDER BY fecha DESC, id DESC LIMIT 500",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3200,
+        13440
+      ],
+      "id": "95c0646f-9b24-4462-85d4-2bf0c2727076",
+      "name": "Execute a SQL query3",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO ventas (id, fecha, items, total, cliente, nota, metodo, cajero, org_id)\nVALUES (\n  $1,\n  $2,\n  $3,\n  $4,\n  $5,\n  $6,\n  $7,\n  $8,\n  $9\n)\nON CONFLICT (id) DO UPDATE SET\n  items = EXCLUDED.items, total = EXCLUDED.total,\n  cliente = EXCLUDED.cliente, metodo = EXCLUDED.metodo, cajero = EXCLUDED.cajero\nRETURNING *",
+        "options": {
+          "queryReplacement": "={{ $json.data_id }}, ={{ $json.data_fecha }}, ={{ $json.data_items }}, ={{ $json.data_total }}, ={{ $json.data_cliente }}, ={{ $json.data_nota }}, ={{ $json.data_metodo }}, ={{ $json.data_cajero }}, ={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3200,
+        13632
+      ],
+      "id": "050ecdec-fe00-49e6-aca5-2c556dc6803a",
+      "name": "Execute a SQL query4",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"data\": $input.all().map(i => i.json), \"ok\": true } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        3424,
+        13536
+      ],
+      "id": "3356f99b-8557-4f54-b941-a0226247d66a",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "merka-ventas",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        2624,
+        13536
+      ],
+      "id": "ee3a8683-3758-4ab1-a688-bfcecaf55347",
+      "name": "Merka · Ventas",
+      "webhookId": "a00058c8-3a0b-4da4-9821-4ceaebbb6eba"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "getAll",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "cf22a78e-eab9-4350-8a51-e1619267e937"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "getAll"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "06dc219e-495f-4900-b9a7-9f870244248e",
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "save",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "save"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9ad06190-6e89-4737-b79b-0e8dc3a30403",
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "delete",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "delete"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        3968,
+        13536
+      ],
+      "id": "feff1cf1-230a-45ed-a702-acdf3ec1cf81",
+      "name": "Switch2"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM clientes WHERE org_id = $1 ORDER BY nombre",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4192,
+        13360
+      ],
+      "id": "a46ef23a-d08d-47eb-a457-975e3cf49e24",
+      "name": "Execute a SQL query5",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO clientes (id, nombre, rut, empresa, telefono, email, direccion, ciudad, nota, limite_credito, dias_credito, org_id)\nVALUES (\n  $1,\n  $2,\n  $3,\n  $4,\n  $5,\n  $6,\n  $7,\n  $8,\n  $9,\n  $10,\n  $11,\n  $12\n)\nON CONFLICT (id) DO UPDATE SET\n  nombre = EXCLUDED.nombre, rut = EXCLUDED.rut, empresa = EXCLUDED.empresa,\n  telefono = EXCLUDED.telefono, email = EXCLUDED.email,\n  direccion = EXCLUDED.direccion, ciudad = EXCLUDED.ciudad,\n  nota = EXCLUDED.nota, limite_credito = EXCLUDED.limite_credito,\n  dias_credito = EXCLUDED.dias_credito\nRETURNING *",
+        "options": {
+          "queryReplacement": "={{ $json.data_id }}, ={{ $json.data_nombre }}, ={{ $json.data_rut }}, ={{ $json.data_empresa }}, ={{ $json.data_telefono }}, ={{ $json.data_email }}, ={{ $json.data_direccion }}, ={{ $json.data_ciudad }}, ={{ $json.data_nota }}, ={{ $json.data_limiteCredito }}, ={{ $json.data_diasCredito }}, ={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4192,
+        13552
+      ],
+      "id": "6ee9f421-5ec1-4e3d-86af-d924b7b09de4",
+      "name": "Execute a SQL query6",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM clientes WHERE id = $1 AND org_id = $2",
+        "options": {
+          "queryReplacement": "={{ $json.id }}, ={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4192,
+        13744
+      ],
+      "id": "5b7439e0-9ffc-4756-a5a3-6b77c3c48cf6",
+      "name": "Execute a SQL query7",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"data\": $input.all().map(i => i.json), \"ok\": true } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        4416,
+        13552
+      ],
+      "id": "bc1d4e41-f3c3-40be-9072-15677a1a2d2f",
+      "name": "Respond to Webhook2"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "merka-clientes",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        3744,
+        13552
+      ],
+      "id": "eefef363-9702-407f-9c55-9c649139a0de",
+      "name": "Merka · Clientes",
+      "webhookId": "b23ddd27-7674-4622-b0d5-315aed3bc142"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "getAll",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "cf22a78e-eab9-4350-8a51-e1619267e937"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "getAll"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "06dc219e-495f-4900-b9a7-9f870244248e",
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "save",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "save"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9ad06190-6e89-4737-b79b-0e8dc3a30403",
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "delete",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "delete"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "6f273583-6c9d-4e4f-833b-e912862800ab",
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "pago",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "pago"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        4928,
+        13520
+      ],
+      "id": "a22b2eb7-7695-4ce0-bb99-6e04bd0d0762",
+      "name": "Switch3"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM cobrar WHERE org_id = $1 ORDER BY vencimiento ASC",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        5152,
+        13264
+      ],
+      "id": "7b441443-cf1d-4738-97fe-7a5d96dd30c5",
+      "name": "Execute a SQL query8",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO cobrar (id, cliente_id, concepto, monto, pagado, fecha, vencimiento, pagos, org_id)\nVALUES (\n  $1,\n  $2,\n  $3,\n  $4,\n  $5,\n  $6,\n  $7,\n  $8,\n  $9\n)\nON CONFLICT (id) DO UPDATE SET\n  concepto = EXCLUDED.concepto, monto = EXCLUDED.monto,\n  pagado = EXCLUDED.pagado, vencimiento = EXCLUDED.vencimiento, pagos = EXCLUDED.pagos\nRETURNING *",
+        "options": {
+          "queryReplacement": "={{ $json.data_id }}, ={{ $json.data_clienteId }}, ={{ $json.data_concepto }}, ={{ $json.data_monto }}, ={{ $json.data_pagado }}, ={{ $json.data_fecha }}, ={{ $json.data_vencimiento }}, ={{ $json.data_pagos }}, ={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        5152,
+        13456
+      ],
+      "id": "a0333ccc-4abe-4f61-ad42-5629ad55906f",
+      "name": "Execute a SQL query9",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM cobrar WHERE id = $1 AND org_id = $2",
+        "options": {
+          "queryReplacement": "={{ $json.id }}, ={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        5152,
+        13648
+      ],
+      "id": "80496313-c5b1-47d3-a814-ee73382ef661",
+      "name": "Execute a SQL query10",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"data\": $input.all().map(i => i.json), \"ok\": true } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        5376,
+        13552
+      ],
+      "id": "bcc8d889-4a08-4fa1-857a-a6ff51a7811b",
+      "name": "Respond to Webhook3"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "merka-cobrar",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        4704,
+        13552
+      ],
+      "id": "cf1cc362-3fc3-46eb-a284-99d54d0aa164",
+      "name": "Merka · Cobrar",
+      "webhookId": "0926c574-066c-479c-97f2-6d96b266e966"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE cobrar SET\n  pagado = pagado + $1,\n  updated_at = NOW()\nWHERE id = $2 AND org_id = $3\nRETURNING *",
+        "options": {
+          "queryReplacement": "={{ $json.monto }}, ={{ $json.cuentaId }}, ={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        5152,
+        13840
+      ],
+      "id": "81aefc29-f598-4bf8-a48a-36bc4961e47e",
+      "name": "Execute a SQL query11",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "getAll",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "cf22a78e-eab9-4350-8a51-e1619267e937"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "getAll"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "06dc219e-495f-4900-b9a7-9f870244248e",
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "save",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "save"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        4928,
+        14144
+      ],
+      "id": "73cc3bbe-b7a8-466f-8d5b-4c1a3b556d31",
+      "name": "Switch4"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM cierres WHERE org_id = $1 ORDER BY fecha DESC",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        5152,
+        14064
+      ],
+      "id": "2236857d-67eb-460c-9c82-ef7bf7b282d1",
+      "name": "Execute a SQL query12",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO cierres (id, fecha, cajero, total_ventas, ventas_efectivo, fondo_inicial, total_esperado, conteo_real, diferencia, nota, org_id)\nVALUES (\n  $1,\n  $2,\n  $3,\n  $4,\n  $5,\n  $6,\n  $7,\n  $8,\n  $9,\n  $10,\n  $11\n)\nON CONFLICT (id) DO NOTHING\nRETURNING *",
+        "options": {
+          "queryReplacement": "={{ $json.data_id }}, ={{ $json.data_fecha }}, ={{ $json.data_cajero }}, ={{ $json.data_totalVentas }}, ={{ $json.data_ventasEfectivo }}, ={{ $json.data_fondoInicial }}, ={{ $json.data_totalEsperado }}, ={{ $json.data_conteoReal }}, ={{ $json.data_diferencia }}, ={{ $json.data_nota }}, ={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        5152,
+        14240
+      ],
+      "id": "7af58412-b63b-40d9-a080-466aa11a5003",
+      "name": "Execute a SQL query13",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"data\": $input.all().map(i => i.json), \"ok\": true } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        5376,
+        14144
+      ],
+      "id": "97f43023-8e6e-4cf8-96bf-b1dfe28388f1",
+      "name": "Respond to Webhook4"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "merka-cierres",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        4704,
+        14144
+      ],
+      "id": "8690af2e-35f6-403a-b5d7-daef9805ba85",
+      "name": "Merka · Cierres",
+      "webhookId": "46843be4-e602-4147-a577-b6a7d90ea312"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "getAll",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "cf22a78e-eab9-4350-8a51-e1619267e937"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "getAll"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "06dc219e-495f-4900-b9a7-9f870244248e",
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "save",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "save"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9ad06190-6e89-4737-b79b-0e8dc3a30403",
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "delete",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "delete"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1952,
+        13504
+      ],
+      "id": "9e0aeef0-b720-42c3-aaea-68382a70cc60",
+      "name": "Switch5"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM proveedores WHERE org_id = $1 ORDER BY nombre",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2176,
+        13328
+      ],
+      "id": "e15af2df-d37d-4800-a132-a97058d4dd24",
+      "name": "Execute a SQL query14",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO proveedores (id, nombre, rut, contacto, telefono, email, direccion, ciudad, nota, org_id)\nVALUES (\n  $1,\n  $2,\n  $3,\n  $4,\n  $5,\n  $6,\n  $7,\n  $8,\n  $9,\n  $10\n)\nON CONFLICT (id) DO UPDATE SET\n  nombre = EXCLUDED.nombre, rut = EXCLUDED.rut, contacto = EXCLUDED.contacto,\n  telefono = EXCLUDED.telefono, email = EXCLUDED.email,\n  direccion = EXCLUDED.direccion, ciudad = EXCLUDED.ciudad, nota = EXCLUDED.nota\nRETURNING *",
+        "options": {
+          "queryReplacement": "={{ $json.data_id }}, ={{ $json.data_nombre }}, ={{ $json.data_rut }}, ={{ $json.data_contacto }}, ={{ $json.data_telefono }}, ={{ $json.data_email }}, ={{ $json.data_direccion }}, ={{ $json.data_ciudad }}, ={{ $json.data_nota }}, ={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2176,
+        13520
+      ],
+      "id": "c6585356-fdae-4a41-b8e7-de5d789df129",
+      "name": "Execute a SQL query15",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM proveedores WHERE id = $1 AND org_id = $2",
+        "options": {
+          "queryReplacement": "={{ $json.id }}, ={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2176,
+        13712
+      ],
+      "id": "dd93a128-a983-497e-8878-5381a6d151de",
+      "name": "Execute a SQL query16",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"data\": $input.all().map(i => i.json), \"ok\": true } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2400,
+        13520
+      ],
+      "id": "55b3ddcd-a416-4a74-a7a4-3b1957057e9c",
+      "name": "Respond to Webhook5"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "merka-proveedores",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1568,
+        13504
+      ],
+      "id": "f0600c93-cd08-448b-8291-f45e9be6b8c9",
+      "name": "Merka · Proveedores",
+      "webhookId": "e17f472f-4171-4747-b015-38504a7f8cdb"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "getAll",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "cf22a78e-eab9-4350-8a51-e1619267e937"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "getAll"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "06dc219e-495f-4900-b9a7-9f870244248e",
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "save",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "save"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9ad06190-6e89-4737-b79b-0e8dc3a30403",
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "delete",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "delete"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "6f273583-6c9d-4e4f-833b-e912862800ab",
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "pago",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "pago"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2960,
+        14128
+      ],
+      "id": "efd4a037-c8ba-43b9-b502-d3b2d7ff9b4f",
+      "name": "Switch6"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM pagar WHERE org_id = $1 ORDER BY vencimiento ASC",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3184,
+        13872
+      ],
+      "id": "bfadc18d-9635-467e-92ec-8552dfe1c864",
+      "name": "Execute a SQL query17",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO pagar (id, proveedor_id, concepto, monto, pagado, fecha, vencimiento, pagos, org_id)\nVALUES (\n  $1,\n  $2,\n  $3,\n  $4,\n  $5,\n  $6,\n  $7,\n  $8,\n  $9\n)\nON CONFLICT (id) DO UPDATE SET\n  concepto = EXCLUDED.concepto, monto = EXCLUDED.monto,\n  pagado = EXCLUDED.pagado, vencimiento = EXCLUDED.vencimiento, pagos = EXCLUDED.pagos\nRETURNING *",
+        "options": {
+          "queryReplacement": "={{ $json.data_id }}, ={{ $json.data_proveedorId }}, ={{ $json.data_concepto }}, ={{ $json.data_monto }}, ={{ $json.data_pagado }}, ={{ $json.data_fecha }}, ={{ $json.data_vencimiento }}, ={{ $json.data_pagos }}, ={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3184,
+        14064
+      ],
+      "id": "5d63dfa6-c957-4eb2-a4e5-7ddb9cfd496d",
+      "name": "Execute a SQL query18",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM pagar WHERE id = $1 AND org_id = $2",
+        "options": {
+          "queryReplacement": "={{ $json.id }}, ={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3184,
+        14256
+      ],
+      "id": "4c7ab4bb-d9b3-4053-99bd-fcc5e992166c",
+      "name": "Execute a SQL query19",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"data\": $input.all().map(i => i.json), \"ok\": true } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        3488,
+        14160
+      ],
+      "id": "4b526b44-e1c9-49f8-b235-a9b13a0d7d7a",
+      "name": "Respond to Webhook6"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE pagar SET\n  pagado = pagado + $1,\n  updated_at = NOW()\nWHERE id = $2 AND org_id = $3\nRETURNING *",
+        "options": {
+          "queryReplacement": "={{ $json.monto }}, ={{ $json.cuentaId }}, ={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3184,
+        14448
+      ],
+      "id": "88c64786-8c38-45b5-9ea2-15a13b8c492a",
+      "name": "Execute a SQL query20",
+      "credentials": {
+        "postgres": {
+          "id": "a1dWapDb0A4nbuyW",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "merka-pagar",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        2736,
+        14160
+      ],
+      "id": "2c2112b1-8e1d-4a10-b670-a64bf375fb97",
+      "name": "Merka · Pagar",
+      "webhookId": "9a898ed3-4a40-4a6e-82e0-d5c177793d6b"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "getAll",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "cf22a78e-eab9-4350-8a51-e1619267e937"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "getAll"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "06dc219e-495f-4900-b9a7-9f870244248e",
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "save",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "save"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9ad06190-6e89-4737-b79b-0e8dc3a30403",
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "delete",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "delete"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        3968,
+        14144
+      ],
+      "id": "e28a2ddc-ac4a-47b4-84c3-a73cc629aa1b",
+      "name": "Switch7"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM gastos WHERE org_id = $1 ORDER BY fecha DESC",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4192,
+        13968
+      ],
+      "id": "61b40dac-d81a-49c5-baa3-80f35dfcab7a",
+      "name": "Execute a SQL query21",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO gastos (id, concepto, monto, fecha, categoria, nota, cajero, org_id)\nVALUES (\n  $1,\n  $2,\n  $3,\n  $4,\n  $5,\n  $6,\n  $7,\n  $8\n)\nON CONFLICT (id) DO NOTHING\nRETURNING *",
+        "options": {
+          "queryReplacement": "={{ $json.data_id }}, ={{ $json.data_concepto }}, ={{ $json.data_monto }}, ={{ $json.data_fecha }}, ={{ $json.data_categoria }}, ={{ $json.data_nota }}, ={{ $json.data_cajero }}, ={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4192,
+        14160
+      ],
+      "id": "9e7e4dd8-8365-4587-acdf-b6c91cb658e1",
+      "name": "Execute a SQL query22",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM gastos WHERE id = $1 AND org_id = $2",
+        "options": {
+          "queryReplacement": "={{ $json.id }}, ={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4192,
+        14352
+      ],
+      "id": "6e490d4e-bcea-4f66-a5d7-6c2ec1df23b4",
+      "name": "Execute a SQL query23",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"data\": $input.all().map(i => i.json), \"ok\": true } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        4416,
+        14160
+      ],
+      "id": "1e40dfde-dd64-4e74-bb2a-73f74e5095c8",
+      "name": "Respond to Webhook7"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "merka-gastos",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        3744,
+        14160
+      ],
+      "id": "3ae66d63-a1f7-420a-af7f-61082b57f037",
+      "name": "Merka · Gastos",
+      "webhookId": "f7993d5e-0343-4caa-a6e2-6c6e834c8186"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "getAll",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "cf22a78e-eab9-4350-8a51-e1619267e937"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "getAll"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "06dc219e-495f-4900-b9a7-9f870244248e",
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "save",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "save"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9ad06190-6e89-4737-b79b-0e8dc3a30403",
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "delete",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "delete"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        736,
+        14128
+      ],
+      "id": "491a6f07-10be-47bb-9663-faeb4a4fc924",
+      "name": "Switch8"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM usuarios WHERE org_id = $1 ORDER BY nombre",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        960,
+        13952
+      ],
+      "id": "71443e5e-994a-4f53-ad9c-237ac54276d2",
+      "name": "Execute a SQL query24",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO usuarios (id, nombre, rol, pin, activo, permisos, org_id)\nVALUES (\n  $1,\n  $2,\n  $3,\n  $4,\n  $5,\n  $6,\n  $7\n)\nON CONFLICT (id) DO UPDATE SET\n  nombre = EXCLUDED.nombre, rol = EXCLUDED.rol, pin = EXCLUDED.pin,\n  activo = EXCLUDED.activo, permisos = EXCLUDED.permisos\nRETURNING *",
+        "options": {
+          "queryReplacement": "={{ $json.data_id }}, ={{ $json.data_nombre }}, ={{ $json.data_rol }}, ={{ $json.data_pin }}, ={{ $json.data_activo }}, ={{ $json.data_permisos }}, ={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        960,
+        14144
+      ],
+      "id": "6782729f-1c32-4df7-9a62-15ce3632ceaf",
+      "name": "Execute a SQL query25",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM usuarios WHERE id = $1 AND org_id = $2",
+        "options": {
+          "queryReplacement": "={{ $json.id }}, ={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        960,
+        14336
+      ],
+      "id": "a5f39023-0ec5-4108-9afc-791d7b6805b2",
+      "name": "Execute a SQL query26",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"data\": $input.all().map(i => i.json), \"ok\": true } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1184,
+        14144
+      ],
+      "id": "bcf71d2e-da96-45c4-a017-0df6443152cc",
+      "name": "Respond to Webhook8"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "merka-usuarios",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        272,
+        14144
+      ],
+      "id": "5548c754-ef10-443c-97f6-e9f35defb491",
+      "name": "Merka · Usuarios",
+      "webhookId": "c141c864-e3e5-4bc2-a643-9a531fa5eaad"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "getAll",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "cf22a78e-eab9-4350-8a51-e1619267e937"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "getAll"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "06dc219e-495f-4900-b9a7-9f870244248e",
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "save",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "save"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1936,
+        14112
+      ],
+      "id": "affa34cd-5c86-4c27-83ec-245f7fd50367",
+      "name": "Switch9"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT datos FROM configuracion WHERE org_id = $1",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2160,
+        14032
+      ],
+      "id": "0ef3b301-28f6-4ca6-b3be-104287039203",
+      "name": "Execute a SQL query27",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO configuracion (org_id, datos, updated_at)\nVALUES ($1, $2, NOW())\nON CONFLICT (org_id) DO UPDATE SET datos = EXCLUDED.datos, updated_at = NOW()\nRETURNING org_id",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}, ={{ $json.data_datos }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2160,
+        14208
+      ],
+      "id": "05e74ce3-548e-4b01-9bf1-f3fbd71f740e",
+      "name": "Execute a SQL query28",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"data\": $input.all().map(i => i.json), \"ok\": true } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2384,
+        14112
+      ],
+      "id": "f9f8adc4-e25b-4337-9945-c955da5bc766",
+      "name": "Respond to Webhook9"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "merka-configuracion",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1632,
+        14112
+      ],
+      "id": "e8671129-80d2-43a5-ae71-5c2652aadc53",
+      "name": "Merka · Configuracion",
+      "webhookId": "29d18c95-ed5f-4842-992c-9eadb8d5c475"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "90213904-9849-4a02-8afb-c64e6f7860e2",
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "=crear-negocio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "crear-negocio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a40dcdcf-3ea4-4b23-949e-0d59795715a4",
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "=activar-negocio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "activar-negocio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "8b5a1d91-25a4-4e39-8afd-13214e5c161c",
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "listar-negocios",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "listar-negocio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "51a92792-ee60-4ed3-bf2a-2d283374608a",
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "=eliminar-negocio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "eliminar-negocio"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2016,
+        14720
+      ],
+      "id": "21cdbb01-54d3-499a-9c0f-0ddd1638ccd2",
+      "name": "Switch11"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "merka-admin",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1712,
+        14784
+      ],
+      "id": "de9e29ea-5b6b-4d76-8de8-0fa494390e84",
+      "name": "Merka · Admin",
+      "webhookId": "b109bca4-0419-4492-8110-f420eff91b06"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "merka-crear-preferencia",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1360,
+        13216
+      ],
+      "id": "6a4725f5-1e2c-4ab8-86f1-44e2b83d6850",
+      "name": "Merka · Crear Preferencia",
+      "webhookId": "9121e5c8-37aa-4f81-a306-8e94fd20b382"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.mercadopago.com/checkout/preferences",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.MERCADOPAGO_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"items\": [{\n    \"title\": \"Merka POS\",\n    \"quantity\": 1,\n    \"unit_price\": {{ $json.body.monto }},\n    \"currency_id\": \"USD\"\n  }],\n  \"payer\": {\n    \"email\": \"{{ $json.body.email }}\"\n  },\n  \"external_reference\": \"{{ $json.body.email }}|{{ $json.body.plan }}|{{ $json.body.nombre_negocio }}|{{ $json.body.org_id || '' }}\",\n  \"back_urls\": {\n    \"success\": \"https://app.merkapos.pro?pago=ok\",\n    \"failure\": \"https://merkapos.pro?pago=error\",\n    \"pending\": \"https://merkapos.pro?pago=pendiente\"\n  },\n  \"auto_return\": \"approved\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1568,
+        13216
+      ],
+      "id": "6cb8f413-8d87-4d7e-880d-5dbacead30d6",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"data\": $input.all().map(i => i.json), \"ok\": true } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1776,
+        13216
+      ],
+      "id": "e802163c-c25c-40a6-a2e0-b3f9e2bc1da5",
+      "name": "Respond to Webhook11"
+    },
+    {
+      "parameters": {
+        "url": "https://api.mercadopago.com/v1/payments/{{ $json.body.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.MERCADOPAGO_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3312,
+        13216
+      ],
+      "id": "ef7e4e79-566d-479c-aa9b-a1629b157c0e",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"data\": $input.all().map(i => i.json), \"ok\": true } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        3520,
+        13104
+      ],
+      "id": "3adb348d-e2b9-4d3d-a3d1-dfda4fb7880b",
+      "name": "Respond to Webhook12"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "merka-pagos",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        3104,
+        13216
+      ],
+      "id": "13d3ab5b-c50d-4a26-b496-bfe27e6ff3d7",
+      "name": "Merka · Pagos",
+      "webhookId": "652fe607-7046-4b53-8da9-800e82802d30"
+    },
+    {
+      "parameters": {
+        "jsCode": "const pago = $input.first().json;\n\n// Solo procesar pagos aprobados\nif(pago.status !== 'approved') return [];\n\nconst ref = pago.external_reference || '';\nconst parts = ref.split('|');\nconst email         = parts[0] || 'cliente';\nconst plan          = parts[1] || 'pro';\nconst nombre        = parts[2] || 'Mi Negocio';\nconst orgIdExistente = parts[3] || '';   // presente si es upgrade de trial\n\nlet orgId;\nif(orgIdExistente && orgIdExistente.trim()) {\n  // Upgrade de cuenta trial existente\n  orgId = orgIdExistente.trim();\n} else {\n  // Nuevo usuario desde landing\n  const base = email.split('@')[0]\n    .replace(/[^a-z0-9]/gi, '-')\n    .toLowerCase()\n    .replace(/-+/g, '-')\n    .replace(/^-|-$/g, '')\n    .slice(0, 16);\n  const suffix = Date.now().toString().slice(-4);\n  orgId = `${base}-${suffix}`;\n}\n\nconst password = orgIdExistente \n  ? null\n  : Math.random().toString(36).slice(-8);\n\nconst planFinal = plan.includes('ia') ? 'pro-ia' : 'pro';\n\nreturn [{ json: { \n  org_id: orgId, \n  password, \n  email, \n  nombre, \n  plan: planFinal,\n  es_upgrade: !!orgIdExistente,\n  pago_id: pago.id\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3728,
+        13216
+      ],
+      "id": "27db5a96-5674-417a-a655-23551adeb535",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO negocios (org_id, password, nombre, plan, demo_start, activo, email)\nVALUES (\n  $1,\n  COALESCE($2, md5(random()::text)),\n  $3,\n  $4,\n  NOW(),\n  true,\n  $5\n)\nON CONFLICT (org_id) DO UPDATE SET\n  plan   = EXCLUDED.plan,\n  activo = true,\n  email  = COALESCE(EXCLUDED.email, negocios.email)\nRETURNING org_id, nombre, plan",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}, ={{ $json.password }}, ={{ $json.nombre }}, ={{ $json.plan }}, ={{ $json.email }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4016,
+        13216
+      ],
+      "id": "875d8151-91d7-4c21-a7f8-327350b85258",
+      "name": "pago_mp",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO negocios (org_id, password, nombre, plan, demo_start)\nVALUES (\n  $1,\n  $2,\n  $3,\n  $4,\n  NOW()\n)\nON CONFLICT (org_id) DO UPDATE SET\n  password = EXCLUDED.password,\n  nombre = EXCLUDED.nombre,\n  plan = EXCLUDED.plan,\n  activo = true\nRETURNING org_id, nombre, plan, demo_start",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}, ={{ $json.password }}, ={{ $json.nombre }}, ={{ $json.plan }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2512,
+        14512
+      ],
+      "id": "190d9923-9144-4bc8-88e3-065f55c6bf52",
+      "name": "pago_mp1",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE negocios SET plan = $1, activo = true WHERE org_id = $2",
+        "options": {
+          "queryReplacement": "={{ $json.plan }}, ={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2512,
+        14672
+      ],
+      "id": "ef013a7b-df86-4ba9-ae19-cf58cfeb1ac1",
+      "name": "pago_mp2",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT org_id, nombre, plan, activo, demo_start, created_at\nFROM negocios\nORDER BY created_at DESC",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2512,
+        14832
+      ],
+      "id": "7519c788-9774-4c39-83bf-e89f4e33cf40",
+      "name": "pago_mp3",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE negocios SET activo = false WHERE org_id = $1",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2528,
+        14992
+      ],
+      "id": "d2a5de47-9a21-4e85-b437-a203d6aa55a7",
+      "name": "pago_mp4",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"data\": $input.all().map(i => i.json), \"ok\": true } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2896,
+        14752
+      ],
+      "id": "7f4adae1-77a3-4010-87c0-316665059138",
+      "name": "Respond to Webhook14"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "login",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "cf22a78e-eab9-4350-8a51-e1619267e937"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "login"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "06dc219e-495f-4900-b9a7-9f870244248e",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "register",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "register"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        3600,
+        15024
+      ],
+      "id": "56107646-d35d-4b98-8e98-2a569b80df70",
+      "name": "Switch10"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"data\": $json, \"ok\": true } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        4320,
+        15040
+      ],
+      "id": "a395669f-39c7-4840-b245-56ab4e979157",
+      "name": "Respond to Webhook10"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO negocios (org_id, password, nombre, plan, demo_start, api_key, trial_end, last_activity, status, payment_status)\nVALUES ($1, $2, $3, 'trial', NOW(), $4, NOW() + INTERVAL '7 days', NOW(), 'active_trial', 'trial')\nON CONFLICT (org_id) DO NOTHING\nRETURNING org_id, nombre, plan, demo_start, api_key, trial_end",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}, ={{ $json.password }}, ={{ $json.nombre }}, ={{ $json.api_key }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3824,
+        14992
+      ],
+      "id": "9cac0001-0975-41bd-8f8a-d9e82f5ddca8",
+      "name": "register",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  org_id, nombre, plan, demo_start, activo, api_key,\n  trial_end,\n  payment_status,\n  CASE \n    WHEN payment_status = 'paid' THEN false\n    WHEN trial_end IS NULL THEN false\n    WHEN trial_end < NOW() THEN true\n    ELSE false\n  END as trial_expired,\n  CASE\n    WHEN trial_end IS NOT NULL AND trial_end > NOW() AND payment_status != 'paid'\n    THEN EXTRACT(DAY FROM trial_end - NOW())::int\n    ELSE NULL\n  END as trial_days_left,\n  true as found\nFROM negocios\nWHERE org_id = $1\nAND password = $2\nAND activo = true\nLIMIT 1",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}, ={{ $json.password }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3824,
+        14816
+      ],
+      "id": "2853c18c-49dc-4918-b07f-4e97d1d4fa75",
+      "name": "login",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "merka-auth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        3184,
+        15008
+      ],
+      "id": "96bf64b6-085c-49a5-9329-70101be009e8",
+      "name": "Merka · Auth",
+      "webhookId": "8b993414-ca33-441e-91d0-55f9be26c1d0"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nif(items.length === 0){\n  return [{ json: { found: false, error: 'Credenciales incorrectas' } }];\n}\nreturn [{ json: { ...items[0].json, found: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4032,
+        14816
+      ],
+      "id": "2c3091c1-7965-4ade-a5d8-dd5935ff13a3",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "merka-registro",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        576,
+        14752
+      ],
+      "id": "37e7f9cb-5a14-4259-be97-1568ddd57ff5",
+      "name": "Merka · Registro",
+      "webhookId": "f4a91c03-7d2e-4b8a-bc15-e2d308a1f9cc"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst email = (body.email || '').trim().toLowerCase();\nconst password = (body.password || '').trim();\nconst nombre = (body.nombre_negocio || 'Mi Negocio').trim();\n\nif (!email || !password) {\n  throw new Error('email y password son obligatorios');\n}\n\nconst base = email.split('@')[0]\n  .replace(/[^a-z0-9]/gi, '-')\n  .toLowerCase()\n  .replace(/-+/g, '-')\n  .replace(/^-|-$/g, '')\n  .slice(0, 16);\n\nconst suffix = Date.now().toString().slice(-5);\nconst org_id = `${base}-${suffix}`;\n\nconst crypto = require(\"crypto\");\nconst api_key = crypto.randomBytes(32).toString(\"hex\");\nreturn [{ json: { api_key, org_id, password, nombre, email } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        14752
+      ],
+      "id": "1e09ada2-178d-4577-87db-1477029ca00e",
+      "name": "Genera org_id"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO negocios (org_id, password, nombre, plan, demo_start, activo, email)\nVALUES ($1, $2, $3, 'trial', NOW(), true, $4)\nON CONFLICT (org_id) DO NOTHING\nRETURNING org_id, nombre, plan, demo_start",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}, ={{ $json.password }}, ={{ $json.nombre }}, ={{ $json.email }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        992,
+        14752
+      ],
+      "id": "8d1f5744-c684-4c73-83ea-96c0f8dc7199",
+      "name": "INSERT negocios",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const pgRows = $input.all();\nconst prev = $('Genera org_id').first().json;\n\nconst row = pgRows.length > 0 ? pgRows[0].json : {};\n\nreturn [{\n  json: {\n    ok: true,\n    org_id: row.org_id || prev.org_id,\n    nombre: row.nombre || prev.nombre,\n    email: row.email || prev.email,\n    password: prev.password\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        14752
+      ],
+      "id": "5cbcc591-ba39-431b-9aef-3f47b3b2f71a",
+      "name": "Valida resultado"
+    },
+    {
+      "parameters": {
+        "fromEmail": "info@autix.pro",
+        "toEmail": "={{ $json.email }}",
+        "subject": "Bienvenido a Merka POS — Tu cuenta está lista",
+        "html": "={{ '<div style=\"font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px;background:#f8f9fa\"><div style=\"background:#fff;border-radius:12px;padding:32px;border:1px solid #e0e0e0\"><h1 style=\"color:#0c1a2e;margin-top:0\">Bienvenido a Merka POS</h1><p style=\"color:#555\">Hola <strong>' + $json.nombre + '</strong>, tu cuenta de prueba fue creada. Tienes <strong>7 días gratis</strong> para explorar el sistema.</p><div style=\"background:#f0f6ff;border-radius:10px;padding:20px;margin:24px 0;border-left:4px solid #0ea5e9\"><p style=\"margin:0 0 12px\"><strong>ID de negocio:</strong><br><span style=\"font-family:monospace;font-size:20px;color:#0ea5e9;letter-spacing:1px\">' + $json.org_id + '</span></p><p style=\"margin:0\"><strong>Contraseña:</strong><br><span style=\"font-family:monospace;font-size:20px;color:#65a30d;letter-spacing:1px\">' + $json.password + '</span></p></div><p style=\"color:#888;font-size:13px\">Guarda estos datos. Los necesitarás para ingresar al sistema.</p><a href=\"https://app.merkapos.pro\" style=\"display:inline-block;background:#65a30d;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:800;font-size:16px\">Entrar a Merka POS</a><hr style=\"margin:28px 0;border:none;border-top:1px solid #eee\"><p style=\"color:#aaa;font-size:12px\">Desarrollado por Autix · info@autix.pro</p></div></div>' }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1408,
+        14896
+      ],
+      "id": "3dca14e6-8462-4a79-af99-f38eb7e61b53",
+      "name": "Send Email Bienvenida",
+      "webhookId": "451352fb-baf2-457a-906d-6ded8d37d5cd",
+      "credentials": {
+        "smtp": {
+          "id": "yg5JS5bayhagsQSE",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": $json.ok, \"org_id\": $json.org_id, \"nombre\": $json.nombre } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1408,
+        14608
+      ],
+      "id": "33050191-e151-4a46-8088-ecf5798bd58c",
+      "name": "Respond to Webhook18"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body;\nif(!b._key || !b.org_id) {\n  throw new Error('Unauthorized: missing credentials');\n}\nconst d = b.data || {};\nreturn [{ json: {\n  _key: b._key,\n  org_id: b.org_id || '',\n  action: b.action || '',\n  id: b.id || null,\n  data_id: d.id || '',\n  data_fecha: d.fecha || '',\n  data_items: JSON.stringify(d.items || []),\n  data_total: d.total || 0,\n  data_cliente: d.cliente || '',\n  data_nota: d.nota || '',\n  data_metodo: d.metodo || '',\n  data_cajero: d.cajero || '',\n} }];"
+      },
+      "id": "c2307616-fa55-4f88-b5d3-f02bd542a4a4",
+      "name": "ExtractBody_Switch1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2800,
+        13536
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body;\nif(!b._key || !b.org_id) {\n  throw new Error('Unauthorized: missing credentials');\n}\nconst d = b.data || {};\nreturn [{ json: {\n  _key: b._key,\n  org_id: b.org_id || '',\n  action: b.action || '',\n  id: b.id || null,\n  data_id: d.id || '',\n  data_nombre: d.nombre || '',\n  data_rut: d.rut || '',\n  data_empresa: d.empresa || '',\n  data_telefono: d.telefono || '',\n  data_email: d.email || '',\n  data_direccion: d.direccion || '',\n  data_ciudad: d.ciudad || '',\n  data_nota: d.nota || '',\n  data_limiteCredito: d.limiteCredito || 0,\n  data_diasCredito: d.diasCredito || 0,\n} }];"
+      },
+      "id": "596bf0f5-c69f-4a92-893e-d9147c2d66d6",
+      "name": "ExtractBody_Switch2",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3760,
+        13792
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body;\nif(!b._key || !b.org_id) {\n  throw new Error('Unauthorized: missing credentials');\n}\nconst d = b.data || {};\nreturn [{ json: {\n  _key: b._key,\n  org_id: b.org_id || '',\n  action: b.action || '',\n  id: b.id || null,\n  cuentaId: b.cuentaId || null,\n  monto: b.monto || 0,\n  data_id: d.id || '',\n  data_clienteId: d.clienteId || '',\n  data_concepto: d.concepto || '',\n  data_monto: d.monto || 0,\n  data_pagado: d.pagado || 0,\n  data_fecha: d.fecha || '',\n  data_vencimiento: d.vencimiento || '',\n  data_pagos: JSON.stringify(d.pagos || []),\n} }];"
+      },
+      "id": "02554d53-fd76-43a5-8eea-65c2436adc5a",
+      "name": "ExtractBody_Switch3",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4736,
+        13888
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body;\nif(!b._key || !b.org_id) {\n  throw new Error('Unauthorized: missing credentials');\n}\nconst d = b.data || {};\nreturn [{ json: {\n  _key: b._key,\n  org_id: b.org_id || '',\n  action: b.action || '',\n  id: b.id || null,\n  data_id: d.id || '',\n  data_fecha: d.fecha || '',\n  data_cajero: d.cajero || '',\n  data_totalVentas: d.totalVentas || 0,\n  data_ventasEfectivo: d.ventasEfectivo || 0,\n  data_fondoInicial: d.fondoInicial || 0,\n  data_totalEsperado: d.totalEsperado || 0,\n  data_conteoReal: d.conteoReal || 0,\n  data_diferencia: d.diferencia || 0,\n  data_nota: d.nota || '',\n} }];"
+      },
+      "id": "f919dc98-fc27-4bbd-b47a-82afcdd3eee4",
+      "name": "ExtractBody_Switch4",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4672,
+        14320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body;\nif(!b._key || !b.org_id) {\n  throw new Error('Unauthorized: missing credentials');\n}\nconst d = b.data || {};\nreturn [{ json: {\n  _key: b._key,\n  org_id: b.org_id || '',\n  action: b.action || '',\n  id: b.id || null,\n  data_id: d.id || '',\n  data_nombre: d.nombre || '',\n  data_rut: d.rut || '',\n  data_contacto: d.contacto || '',\n  data_telefono: d.telefono || '',\n  data_email: d.email || '',\n  data_direccion: d.direccion || '',\n  data_ciudad: d.ciudad || '',\n  data_nota: d.nota || '',\n} }];"
+      },
+      "id": "9f46ccee-8477-4fd6-9261-78dd5483e7a4",
+      "name": "ExtractBody_Switch5",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1744,
+        13504
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body;\nif(!b._key || !b.org_id) {\n  throw new Error('Unauthorized: missing credentials');\n}\nconst d = b.data || {};\nreturn [{ json: {\n  _key: b._key,\n  org_id: b.org_id || '',\n  action: b.action || '',\n  id: b.id || null,\n  cuentaId: b.cuentaId || null,\n  monto: b.monto || 0,\n  data_id: d.id || '',\n  data_proveedorId: d.proveedorId || '',\n  data_concepto: d.concepto || '',\n  data_monto: d.monto || 0,\n  data_pagado: d.pagado || 0,\n  data_fecha: d.fecha || '',\n  data_vencimiento: d.vencimiento || '',\n  data_pagos: JSON.stringify(d.pagos || []),\n} }];"
+      },
+      "id": "c6c3178a-4ce3-4e80-b03f-8a2b0136e27c",
+      "name": "ExtractBody_Switch6",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2784,
+        14384
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body;\nif(!b._key || !b.org_id) {\n  throw new Error('Unauthorized: missing credentials');\n}\nconst d = b.data || {};\nreturn [{ json: {\n  _key: b._key,\n  org_id: b.org_id || '',\n  action: b.action || '',\n  id: b.id || null,\n  data_id: d.id || '',\n  data_concepto: d.concepto || '',\n  data_monto: d.monto || 0,\n  data_fecha: d.fecha || '',\n  data_categoria: d.categoria || 'Otro',\n  data_nota: d.nota || '',\n  data_cajero: d.cajero || '',\n} }];"
+      },
+      "id": "cd4db8ec-beb9-48f8-b72e-981a572c9da5",
+      "name": "ExtractBody_Switch7",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3792,
+        14368
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body;\nif(!b._key || !b.org_id) {\n  throw new Error('Unauthorized: missing credentials');\n}\nconst d = b.data || {};\nreturn [{ json: {\n  _key: b._key,\n  org_id: b.org_id || '',\n  action: b.action || '',\n  id: b.id || null,\n  data_id: d.id || '',\n  data_nombre: d.nombre || '',\n  data_rol: d.rol || 'Cajero',\n  data_pin: d.pin || '',\n  data_activo: d.activo !== false,\n  data_permisos: JSON.stringify(d.permisos || {}),\n} }];"
+      },
+      "id": "6d08a735-6862-4e5a-999d-ff3a6ecaeb5f",
+      "name": "ExtractBody_Switch8",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        544,
+        14144
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body;\nif(!b._key || !b.org_id) {\n  throw new Error('Unauthorized: missing credentials');\n}\nreturn [{ json: {\n  org_id: String(b.org_id || '').replace(/[^a-z0-9\\-_]/gi,'').slice(0,50),\n  password: b.password || '',\n  nombre: b.nombre || '',\n  action: b.action || '',\n} }];"
+      },
+      "id": "e9d65698-696a-445a-bd3a-c02576055923",
+      "name": "ExtractBody_Switch10",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3424,
+        14992
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body;\n// Endpoint de plataforma: lista/crea/activa/elimina CUALQUIER negocio.\n// No usa el api_key de un negocio — exige el secreto de admin de n8n.\nif (!b._key || b._key !== $env.MERKA_ADMIN_SECRET) {\n  throw new Error('Unauthorized: admin secret inválido');\n}\nconst d = b.data || {};\nreturn [{ json: {\n  org_id: b.org_id || '',\n  action: b.action || '',\n  data_datos: JSON.stringify(d || {}),\n} }];"
+      },
+      "id": "15cbe3aa-715d-4d58-b556-757fe818ffa8",
+      "name": "ExtractBody_Switch11",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1888,
+        14944
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nif (!items || items.length === 0) {\n  return [{ json: { _empty: true } }];\n}\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        13264
+      ],
+      "id": "9f75fef5-a3ab-40d6-8272-ef3ca8dd8a6c",
+      "name": "Guard getAll"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "merka-productos",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -336,
+        13472
+      ],
+      "id": "6426137f-59d7-4299-9629-e4b81bbb2c30",
+      "name": "Merka · Productos1",
+      "webhookId": "8820a6b4-3037-4f10-9cba-db432aea785c"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "getAll",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "cf22a78e-eab9-4350-8a51-e1619267e937"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "getAll"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "06dc219e-495f-4900-b9a7-9f870244248e",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "save",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "save"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9ad06190-6e89-4737-b79b-0e8dc3a30403",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "delete",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "delete"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        48,
+        13440
+      ],
+      "id": "b6d8a6af-5fa4-47aa-89c1-c7a76abb0c5b",
+      "name": "Switch12"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM productos WHERE org_id = $1 ORDER BY categoria, nombre",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        272,
+        13264
+      ],
+      "id": "7ca2c99f-9bbd-4264-bd18-9a7e03e7103c",
+      "name": "Execute a SQL query29",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+              "leftValue": "={{ $json.data_imagenBase64 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        272,
+        13456
+      ],
+      "id": "a29a16c7-3306-4b73-85c7-6d57d7c6ffb9",
+      "name": "¿Tiene imagen?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.cloudinary.com/v1_1/dzteusxbl/image/upload",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "file",
+              "value": "={{ $json.data_imagenBase64 }}"
+            },
+            {
+              "name": "upload_preset",
+              "value": "merka_productos"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        496,
+        13360
+      ],
+      "id": "21c54a17-12ac-4d14-9605-b7de5ed1fa82",
+      "name": "Cloudinary Upload"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cloudinary = $input.first().json;\nconst prev = $('¿Tiene imagen?').first().json;\nreturn [{ json: {\n  ...prev,\n  data_imagenUrl: cloudinary.secure_url || '',\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        13360
+      ],
+      "id": "91d12bfd-cf77-486d-aff4-adbb0428d7f9",
+      "name": "Extrae URL Cloudinary"
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $input.first().json;\nreturn [{ json: {\n  ...prev,\n  data_imagenUrl: prev.data_imagenUrl || '',\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        13552
+      ],
+      "id": "58c49f0b-cd0c-43f2-b287-686efbd9378a",
+      "name": "Sin imagen → URL vacía"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO productos (id, nombre, sku, precio_compra, precio_venta, stock, unidad, categoria, vender_por_peso, volumen, imagen_url, org_id)\nVALUES (\n  $1,\n  $2,\n  $3,\n  $4,\n  $5,\n  $6,\n  $7,\n  $8,\n  $9,\n  $10,\n  NULLIF($11, ''),\n  $12\n)\nON CONFLICT (id) DO UPDATE SET\n  nombre = EXCLUDED.nombre, sku = EXCLUDED.sku,\n  precio_compra = EXCLUDED.precio_compra, precio_venta = EXCLUDED.precio_venta,\n  stock = EXCLUDED.stock, unidad = EXCLUDED.unidad,\n  categoria = EXCLUDED.categoria, vender_por_peso = EXCLUDED.vender_por_peso,\n  volumen = EXCLUDED.volumen,\n  imagen_url = COALESCE(EXCLUDED.imagen_url, productos.imagen_url)\nRETURNING *",
+        "options": {
+          "queryReplacement": "={{ $json.data_id }}, ={{ $json.data_nombre }}, ={{ $json.data_sku }}, ={{ $json.data_precioCompra }}, ={{ $json.data_precioVenta }}, ={{ $json.data_stock }}, ={{ $json.data_unidad }}, ={{ $json.data_categoria }}, ={{ $json.data_venderPorPeso }}, ={{ $json.data_volumen }}, ={{ $json.data_imagenUrl }}, ={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        944,
+        13456
+      ],
+      "id": "dd7db784-428e-47b1-acc4-c75308989a48",
+      "name": "Execute a SQL query30",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM productos WHERE id = $1 AND org_id = $2",
+        "options": {
+          "queryReplacement": "={{ $json.id }}, ={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        272,
+        13648
+      ],
+      "id": "58bb7bc8-93d9-4f4b-b524-2bdc981b7ce7",
+      "name": "Execute a SQL query31",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"data\": $input.all().map(i => i.json).filter(i => !i._empty), \"ok\": true } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1168,
+        13456
+      ],
+      "id": "d320a80f-96e7-4ecb-a6c8-b7ac51e39de4",
+      "name": "Respond to Webhook16"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body;\nif(!b._key || !b.org_id) {\n  throw new Error('Unauthorized: missing credentials');\n}\nconst d = b.data || {};\nreturn [{ json: {\n  _key: b._key,\n  org_id: b.org_id || '',\n  action: b.action || '',\n  id: b.id || null,\n  data_id: d.id || '',\n  data_nombre: d.nombre || '',\n  data_sku: d.sku || '',\n  data_precioCompra: d.precioCompra || 0,\n  data_precioVenta: d.precioVenta || 0,\n  data_stock: d.stock || 0,\n  data_unidad: d.unidad || 'unidad',\n  data_categoria: d.categoria || 'General',\n  data_venderPorPeso: d.venderPorPeso || false,\n  data_volumen: JSON.stringify(d.volumen || []),\n  data_imagenBase64: d.imagenBase64 || '',\n} }];"
+      },
+      "id": "24f9990b-b359-4a55-941e-48502b162b93",
+      "name": "ExtractBody_Switch12",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        13472
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE negocios SET last_activity = NOW() WHERE org_id = $1",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        4304,
+        14816
+      ],
+      "id": "dc110c76-6543-4dff-a333-7f4ce1ddb6bc",
+      "name": "Update last_activity",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -64,
+        14720
+      ],
+      "id": "094ee5dd-ee0a-403d-811d-7603029ac91c",
+      "name": "Cron diario 02:00"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM ventas WHERE org_id IN (SELECT org_id FROM negocios WHERE payment_status != 'paid' AND last_activity < NOW() - INTERVAL '15 days');\nDELETE FROM productos WHERE org_id IN (SELECT org_id FROM negocios WHERE payment_status != 'paid' AND last_activity < NOW() - INTERVAL '15 days');\nDELETE FROM clientes WHERE org_id IN (SELECT org_id FROM negocios WHERE payment_status != 'paid' AND last_activity < NOW() - INTERVAL '15 days');\nDELETE FROM cobrar WHERE org_id IN (SELECT org_id FROM negocios WHERE payment_status != 'paid' AND last_activity < NOW() - INTERVAL '15 days');\nDELETE FROM gastos WHERE org_id IN (SELECT org_id FROM negocios WHERE payment_status != 'paid' AND last_activity < NOW() - INTERVAL '15 days');\nDELETE FROM proveedores WHERE org_id IN (SELECT org_id FROM negocios WHERE payment_status != 'paid' AND last_activity < NOW() - INTERVAL '15 days');\nDELETE FROM pagar WHERE org_id IN (SELECT org_id FROM negocios WHERE payment_status != 'paid' AND last_activity < NOW() - INTERVAL '15 days');\nDELETE FROM cierres WHERE org_id IN (SELECT org_id FROM negocios WHERE payment_status != 'paid' AND last_activity < NOW() - INTERVAL '15 days');\nDELETE FROM usuarios WHERE org_id IN (SELECT org_id FROM negocios WHERE payment_status != 'paid' AND last_activity < NOW() - INTERVAL '15 days');\nDELETE FROM negocios WHERE payment_status != 'paid' AND last_activity < NOW() - INTERVAL '15 days';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        160,
+        14720
+      ],
+      "id": "92336f52-96aa-4096-b9fb-a9c12a64549e",
+      "name": "Limpiar cuentas abandonadas",
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 401,
+        "responseBody": "={{ { \"ok\": false, \"error\": \"No autorizado\" } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        6200,
+        15200
+      ],
+      "id": "4e440698-09d0-4156-bb28-1b03a667cc13",
+      "name": "Responder 401"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT org_id FROM negocios WHERE org_id = $1 AND api_key = $2 AND activo = true LIMIT 1",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}, ={{ $json._key }}"
+        },
+        "alwaysOutputData": true
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        6000,
+        15400
+      ],
+      "id": "93ec2251-72c8-40bf-b0b0-36146a9c34be",
+      "name": "Verificar sesión · Ventas",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "83393f58-a289-46c3-afec-0f6cffeb8f79",
+              "leftValue": "={{ $json.org_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6100,
+        15400
+      ],
+      "id": "708b22af-0d66-418a-a79b-d254e07bb63c",
+      "name": "¿Autorizado? · Ventas"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT org_id FROM negocios WHERE org_id = $1 AND api_key = $2 AND activo = true LIMIT 1",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}, ={{ $json._key }}"
+        },
+        "alwaysOutputData": true
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        6000,
+        15600
+      ],
+      "id": "c9661469-9da7-4b3d-b87e-67b723ed76f4",
+      "name": "Verificar sesión · Clientes",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "28fd060f-6a96-451e-a5cc-b4734a3367e0",
+              "leftValue": "={{ $json.org_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6100,
+        15600
+      ],
+      "id": "41e32e89-0f1b-46f6-9607-49e4a71c5478",
+      "name": "¿Autorizado? · Clientes"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT org_id FROM negocios WHERE org_id = $1 AND api_key = $2 AND activo = true LIMIT 1",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}, ={{ $json._key }}"
+        },
+        "alwaysOutputData": true
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        6000,
+        15800
+      ],
+      "id": "37114481-a52a-42a2-988e-f96b5aae629c",
+      "name": "Verificar sesión · Cobrar",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8f6bbfd6-ffda-407c-b410-8bf3b971f75d",
+              "leftValue": "={{ $json.org_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6100,
+        15800
+      ],
+      "id": "85f214af-5b6f-4159-834c-86376e3b550c",
+      "name": "¿Autorizado? · Cobrar"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT org_id FROM negocios WHERE org_id = $1 AND api_key = $2 AND activo = true LIMIT 1",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}, ={{ $json._key }}"
+        },
+        "alwaysOutputData": true
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        6000,
+        16000
+      ],
+      "id": "2f499777-8abf-4d91-a24f-93566bea72f5",
+      "name": "Verificar sesión · Cierres",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c8bd2c9c-f11f-4cbe-ab5f-cde4abdc10b6",
+              "leftValue": "={{ $json.org_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6100,
+        16000
+      ],
+      "id": "55e7a3f2-5c98-4a5e-8c47-2540ca9a1a26",
+      "name": "¿Autorizado? · Cierres"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT org_id FROM negocios WHERE org_id = $1 AND api_key = $2 AND activo = true LIMIT 1",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}, ={{ $json._key }}"
+        },
+        "alwaysOutputData": true
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        6000,
+        16200
+      ],
+      "id": "2610103c-9bf6-4222-a22d-3ee98cf73dc7",
+      "name": "Verificar sesión · Proveedores",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "246b9c21-e74f-4f89-9e94-03297f18eb11",
+              "leftValue": "={{ $json.org_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6100,
+        16200
+      ],
+      "id": "7323418b-5ef2-41b5-8110-74afc0ac75bd",
+      "name": "¿Autorizado? · Proveedores"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT org_id FROM negocios WHERE org_id = $1 AND api_key = $2 AND activo = true LIMIT 1",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}, ={{ $json._key }}"
+        },
+        "alwaysOutputData": true
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        6000,
+        16400
+      ],
+      "id": "f4cc524a-e085-4e86-8fed-2f71174792e7",
+      "name": "Verificar sesión · Pagar",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "25b95457-7e67-4463-bb88-062c2f31d15e",
+              "leftValue": "={{ $json.org_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6100,
+        16400
+      ],
+      "id": "ae4c50f9-438b-4f7c-892a-e50a7ebfdd5e",
+      "name": "¿Autorizado? · Pagar"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT org_id FROM negocios WHERE org_id = $1 AND api_key = $2 AND activo = true LIMIT 1",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}, ={{ $json._key }}"
+        },
+        "alwaysOutputData": true
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        6000,
+        16600
+      ],
+      "id": "6a183433-a9a8-404c-b345-8cc5dca94c03",
+      "name": "Verificar sesión · Gastos",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3c64e99e-e82a-43d3-ae92-0f542e2660ef",
+              "leftValue": "={{ $json.org_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6100,
+        16600
+      ],
+      "id": "dfc5d1e8-51bd-4cca-a85d-8aec1f9d0569",
+      "name": "¿Autorizado? · Gastos"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT org_id FROM negocios WHERE org_id = $1 AND api_key = $2 AND activo = true LIMIT 1",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}, ={{ $json._key }}"
+        },
+        "alwaysOutputData": true
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        6000,
+        16800
+      ],
+      "id": "561e3b94-b3f4-4a96-957b-2c978477f3c6",
+      "name": "Verificar sesión · Usuarios",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b5c8aa5d-56b5-4cb3-b916-11d3754403b7",
+              "leftValue": "={{ $json.org_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6100,
+        16800
+      ],
+      "id": "0cdff0d1-834d-4a13-8b33-ea60f241595f",
+      "name": "¿Autorizado? · Usuarios"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT org_id FROM negocios WHERE org_id = $1 AND api_key = $2 AND activo = true LIMIT 1",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}, ={{ $json._key }}"
+        },
+        "alwaysOutputData": true
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        6000,
+        17000
+      ],
+      "id": "d7213c3b-bce5-454d-a2ab-1a9fcc11a6ef",
+      "name": "Verificar sesión · Productos",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c7e7cfa3-3fb0-41f1-82e9-2c5e8b10dd0c",
+              "leftValue": "={{ $json.org_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6100,
+        17000
+      ],
+      "id": "4b132f9a-db5c-4c97-b534-591bec02d2c5",
+      "name": "¿Autorizado? · Productos"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body;\nif(!b._key || !b.org_id) {\n  throw new Error('Unauthorized: missing credentials');\n}\nconst d = b.data || {};\nreturn [{ json: {\n  _key: b._key,\n  org_id: b.org_id || '',\n  action: b.action || '',\n  data_datos: JSON.stringify(d || {}),\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5850,
+        17200
+      ],
+      "id": "eea3454e-5173-4743-97b7-fdc203e9e4f6",
+      "name": "ExtractBody_Switch9"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT org_id FROM negocios WHERE org_id = $1 AND api_key = $2 AND activo = true LIMIT 1",
+        "options": {
+          "queryReplacement": "={{ $json.org_id }}, ={{ $json._key }}"
+        },
+        "alwaysOutputData": true
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        6000,
+        17200
+      ],
+      "id": "003d48fe-ab2e-4bfa-8911-0009ef6953da",
+      "name": "Verificar sesión · Configuracion",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "QDealUq583Euxv9U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b064c83d-88ff-4f5c-9fff-bae37d964ca4",
+              "leftValue": "={{ $json.org_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6100,
+        17200
+      ],
+      "id": "9614e755-75e5-4c93-b6c2-186d50285b27",
+      "name": "¿Autorizado? · Configuracion"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute a SQL query4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query3": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query4": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merka · Ventas": {
+      "main": [
+        [
+          {
+            "node": "ExtractBody_Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch2": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute a SQL query6",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute a SQL query7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query5": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query6": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query7": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merka · Clientes": {
+      "main": [
+        [
+          {
+            "node": "ExtractBody_Switch2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch3": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query8",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute a SQL query9",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute a SQL query10",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute a SQL query11",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query8": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query9": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query10": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merka · Cobrar": {
+      "main": [
+        [
+          {
+            "node": "ExtractBody_Switch3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query11": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch4": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query12",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute a SQL query13",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query12": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query13": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merka · Cierres": {
+      "main": [
+        [
+          {
+            "node": "ExtractBody_Switch4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch5": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query14",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute a SQL query15",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute a SQL query16",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query14": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query15": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query16": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merka · Proveedores": {
+      "main": [
+        [
+          {
+            "node": "ExtractBody_Switch5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch6": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query17",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute a SQL query18",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute a SQL query19",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute a SQL query20",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query17": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query18": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query19": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query20": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merka · Pagar": {
+      "main": [
+        [
+          {
+            "node": "ExtractBody_Switch6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch7": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query21",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute a SQL query22",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute a SQL query23",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query21": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query22": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query23": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merka · Gastos": {
+      "main": [
+        [
+          {
+            "node": "ExtractBody_Switch7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch8": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query24",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute a SQL query25",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute a SQL query26",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query24": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query25": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query26": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merka · Usuarios": {
+      "main": [
+        [
+          {
+            "node": "ExtractBody_Switch8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch9": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query27",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute a SQL query28",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query27": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query28": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merka · Configuracion": {
+      "main": [
+        [
+          {
+            "node": "ExtractBody_Switch9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merka · Admin": {
+      "main": [
+        [
+          {
+            "node": "ExtractBody_Switch11",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merka · Crear Preferencia": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook11",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merka · Pagos": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "pago_mp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "pago_mp": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook12",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch11": {
+      "main": [
+        [
+          {
+            "node": "pago_mp1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "pago_mp2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "pago_mp3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "pago_mp4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "pago_mp1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook14",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "pago_mp2": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook14",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "pago_mp3": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook14",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "pago_mp4": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook14",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch10": {
+      "main": [
+        [
+          {
+            "node": "login",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "register",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "register": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "login": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merka · Auth": {
+      "main": [
+        [
+          {
+            "node": "ExtractBody_Switch10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook10",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update last_activity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merka · Registro": {
+      "main": [
+        [
+          {
+            "node": "Genera org_id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Genera org_id": {
+      "main": [
+        [
+          {
+            "node": "INSERT negocios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "INSERT negocios": {
+      "main": [
+        [
+          {
+            "node": "Valida resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valida resultado": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook18",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Email Bienvenida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExtractBody_Switch1": {
+      "main": [
+        [
+          {
+            "node": "Verificar sesión · Ventas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExtractBody_Switch2": {
+      "main": [
+        [
+          {
+            "node": "Verificar sesión · Clientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExtractBody_Switch3": {
+      "main": [
+        [
+          {
+            "node": "Verificar sesión · Cobrar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExtractBody_Switch4": {
+      "main": [
+        [
+          {
+            "node": "Verificar sesión · Cierres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExtractBody_Switch5": {
+      "main": [
+        [
+          {
+            "node": "Verificar sesión · Proveedores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExtractBody_Switch6": {
+      "main": [
+        [
+          {
+            "node": "Verificar sesión · Pagar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExtractBody_Switch7": {
+      "main": [
+        [
+          {
+            "node": "Verificar sesión · Gastos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExtractBody_Switch8": {
+      "main": [
+        [
+          {
+            "node": "Verificar sesión · Usuarios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExtractBody_Switch10": {
+      "main": [
+        [
+          {
+            "node": "Switch10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExtractBody_Switch11": {
+      "main": [
+        [
+          {
+            "node": "Switch11",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merka · Productos1": {
+      "main": [
+        [
+          {
+            "node": "ExtractBody_Switch12",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExtractBody_Switch12": {
+      "main": [
+        [
+          {
+            "node": "Verificar sesión · Productos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch12": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query29",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "¿Tiene imagen?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute a SQL query31",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query29": {
+      "main": [
+        [
+          {
+            "node": "Guard getAll",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guard getAll": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook16",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Tiene imagen?": {
+      "main": [
+        [
+          {
+            "node": "Cloudinary Upload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sin imagen → URL vacía",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cloudinary Upload": {
+      "main": [
+        [
+          {
+            "node": "Extrae URL Cloudinary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrae URL Cloudinary": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query30",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sin imagen → URL vacía": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query30",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query30": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook16",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query31": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook16",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cron diario 02:00": {
+      "main": [
+        [
+          {
+            "node": "Limpiar cuentas abandonadas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar sesión · Ventas": {
+      "main": [
+        [
+          {
+            "node": "¿Autorizado? · Ventas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Autorizado? · Ventas": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar sesión · Clientes": {
+      "main": [
+        [
+          {
+            "node": "¿Autorizado? · Clientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Autorizado? · Clientes": {
+      "main": [
+        [
+          {
+            "node": "Switch2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar sesión · Cobrar": {
+      "main": [
+        [
+          {
+            "node": "¿Autorizado? · Cobrar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Autorizado? · Cobrar": {
+      "main": [
+        [
+          {
+            "node": "Switch3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar sesión · Cierres": {
+      "main": [
+        [
+          {
+            "node": "¿Autorizado? · Cierres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Autorizado? · Cierres": {
+      "main": [
+        [
+          {
+            "node": "Switch4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar sesión · Proveedores": {
+      "main": [
+        [
+          {
+            "node": "¿Autorizado? · Proveedores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Autorizado? · Proveedores": {
+      "main": [
+        [
+          {
+            "node": "Switch5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar sesión · Pagar": {
+      "main": [
+        [
+          {
+            "node": "¿Autorizado? · Pagar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Autorizado? · Pagar": {
+      "main": [
+        [
+          {
+            "node": "Switch6",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar sesión · Gastos": {
+      "main": [
+        [
+          {
+            "node": "¿Autorizado? · Gastos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Autorizado? · Gastos": {
+      "main": [
+        [
+          {
+            "node": "Switch7",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar sesión · Usuarios": {
+      "main": [
+        [
+          {
+            "node": "¿Autorizado? · Usuarios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Autorizado? · Usuarios": {
+      "main": [
+        [
+          {
+            "node": "Switch8",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar sesión · Productos": {
+      "main": [
+        [
+          {
+            "node": "¿Autorizado? · Productos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Autorizado? · Productos": {
+      "main": [
+        [
+          {
+            "node": "Switch12",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExtractBody_Switch9": {
+      "main": [
+        [
+          {
+            "node": "Verificar sesión · Configuracion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar sesión · Configuracion": {
+      "main": [
+        [
+          {
+            "node": "¿Autorizado? · Configuracion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Autorizado? · Configuracion": {
+      "main": [
+        [
+          {
+            "node": "Switch9",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "94ea7a74-73cb-4154-bc82-43fcd184f514",
+  "meta": {
+    "templateId": "rag-starter-template",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6290c3d4f9aa211038547748dbc318e34a55720313532ce42cef99af97f41779"
+  },
+  "nodeGroups": [],
+  "id": "y5AEcdLdhaSMUu9I",
+  "tags": []
+}
