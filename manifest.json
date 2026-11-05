@@ -22,15 +22,6 @@
       "purpose": "any maskable"
     }
   ],
-  "screenshots": [
-    {
-      "src": "/screenshot.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Terminal de Ventas"
-    }
-  ],
   "shortcuts": [
     {
       "name": "Terminal de Ventas",

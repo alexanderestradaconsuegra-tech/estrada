@@ -1,46 +1,17 @@
-FROM nginx:alpine
-RUN apk add --no-cache curl
+FROM nginx:1.27-alpine
 
-# Download app files from GitHub
-RUN curl -L "https://raw.githubusercontent.com/alexanderestradaconsuegra-tech/estrada/main/index.html" -o /usr/share/nginx/html/index.html
-RUN curl -L "https://raw.githubusercontent.com/alexanderestradaconsuegra-tech/estrada/main/manifest.json" -o /usr/share/nginx/html/manifest.json
-RUN curl -L "https://raw.githubusercontent.com/alexanderestradaconsuegra-tech/estrada/main/sw.js" -o /usr/share/nginx/html/sw.js
-RUN curl -L "https://raw.githubusercontent.com/alexanderestradaconsuegra-tech/estrada/main/icon-192.png" -o /usr/share/nginx/html/icon-192.png
-RUN curl -L "https://raw.githubusercontent.com/alexanderestradaconsuegra-tech/estrada/main/icon-512.png" -o /usr/share/nginx/html/icon-512.png
+# Los archivos se copian del repositorio que EasyPanel clona en el build.
+# Antes se descargaban con curl desde la rama main: la capa se cacheaba y
+# el commit desplegado no era trazable.
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY security-headers.conf /etc/nginx/snippets/security-headers.conf
+COPY index.html manifest.json sw.js icon-192.png icon-512.png /usr/share/nginx/html/
 
-# Nginx config for PWA - proper headers
-RUN echo 'server { \
-  listen 80; \
-  root /usr/share/nginx/html; \
-  index index.html; \
-  \
-  # Service worker must be served from root \
-  location /sw.js { \
-    add_header Cache-Control "no-cache, no-store, must-revalidate"; \
-    add_header Service-Worker-Allowed "/"; \
-  } \
-  \
-  # Manifest \
-  location /manifest.json { \
-    add_header Cache-Control "no-cache"; \
-    add_header Content-Type "application/manifest+json"; \
-  } \
-  \
-  # HTML - no cache \
-  location /index.html { \
-    add_header Cache-Control "no-cache, no-store, must-revalidate"; \
-  } \
-  \
-  # Static assets - cache 7 days \
-  location ~* \.(png|jpg|jpeg|gif|ico|svg)$ { \
-    add_header Cache-Control "public, max-age=604800"; \
-  } \
-  \
-  # SPA fallback \
-  location / { \
-    try_files $uri $uri/ /index.html; \
-  } \
-}' > /etc/nginx/conf.d/default.conf
+# Versiona el service worker con el commit para invalidar cachés viejas
+ARG BUILD_VERSION=dev
+RUN sed -i "s/__BUILD_VERSION__/${BUILD_VERSION}/" /usr/share/nginx/html/sw.js
 
 EXPOSE 80
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
+  CMD wget -qO- http://127.0.0.1/health || exit 1
 CMD ["nginx", "-g", "daemon off;"]

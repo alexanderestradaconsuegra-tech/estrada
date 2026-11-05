@@ -1,6 +1,6 @@
 // Merka POS — Service Worker
 // Versión: actualizar este número fuerza la reinstalación del SW
-const CACHE_VERSION = 'merka-v1';
+const CACHE_VERSION = '__BUILD_VERSION__'; // lo reemplaza el Dockerfile con el commit
 const CACHE_NAME = `merka-pos-${CACHE_VERSION}`;
 
 // Archivos a cachear para uso offline
@@ -43,6 +43,8 @@ self.addEventListener('activate', event => {
 
 // ── FETCH: network-first for API, cache-first for assets ──
 self.addEventListener('fetch', event => {
+  // Solo GET se cachea; POST (webhooks) y el resto pasan directo a la red
+  if(event.request.method !== 'GET' && !event.request.url.includes('/webhook/')) return;
   const url = new URL(event.request.url);
 
   // API calls (n8n webhooks) → always network, never cache
@@ -77,7 +79,7 @@ self.addEventListener('fetch', event => {
     fetch(event.request)
       .then(response => {
         // Cache successful responses
-        if(response && response.status === 200){
+        if(response && response.status === 200 && url.origin === self.location.origin){
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }

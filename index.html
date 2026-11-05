@@ -1552,37 +1552,61 @@ const ENDPOINTS = {
   auth:          N8N + '/merka-auth',
 };
 
-const API_KEY = '29ca5e72b5b7040eb4b39532d918d743bf6a112c58418882'; // fallback global key
-
+// La clave global fue eliminada del cliente (estaba expuesta en el repo).
+// Cada org usa su api_key por sesión, devuelta por merka-auth tras el login.
 function getApiKey(){
-  // Use per-org key if available (set after login)
   const key = sessionStorage.getItem('merka_api_key');
   if(key) return key;
   const s = sessionStorage.getItem('merka_session');
   if(s){ try{ const p=JSON.parse(s); if(p.api_key) return p.api_key; }catch(e){} }
-  return API_KEY;
+  return '';
 }
+
+const API_TIMEOUT_MS = 15000;
+const API_RETRIES = 2;            // solo para lecturas (idempotentes)
+let API_LAST_ERROR = null;
 
 const API = {
   async call(endpoint, body) {
-    try {
-      const isAuth = endpoint.includes('merka-auth') || endpoint.includes('merka-admin');
-      const payload = isAuth ? body : { ...body, org_id: getOrgId(), _key: getApiKey() };
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify(payload)
-      });
-      if(!res.ok) throw new Error('HTTP '+res.status);
-      const json = await res.json();
-      if(Array.isArray(json)) return json;
-      if(Array.isArray(json.data)) return json.data;
-      if(json.data) return json.data;
-      return json;
-    } catch(e) {
-      console.warn('API error:', e.message);
-      return null;
+    const isAuth = endpoint.includes('merka-auth') || endpoint.includes('merka-admin');
+    const isRead = body && body.action === 'getAll';
+    const key = getApiKey();
+    const payload = isAuth ? body : { ...body, org_id: getOrgId(), ...(key ? {_key: key} : {}) };
+    const attempts = isRead ? API_RETRIES + 1 : 1;
+    let lastErr;
+    for(let i = 0; i < attempts; i++){
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), API_TIMEOUT_MS);
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(payload),
+          signal: ctrl.signal
+        });
+        if(res.status === 401 || res.status === 403) throw Object.assign(new Error('HTTP '+res.status), {fatal:true});
+        if(!res.ok) throw new Error('HTTP '+res.status);
+        const json = await res.json();
+        API_LAST_ERROR = null;
+        if(Array.isArray(json)) return json;
+        if(Array.isArray(json.data)) return json.data;
+        if(json.data) return json.data;
+        return json;
+      } catch(e) {
+        lastErr = e;
+        if(e.fatal) break;
+        if(i < attempts - 1) await new Promise(r => setTimeout(r, 400 * Math.pow(2, i)));
+      } finally {
+        clearTimeout(timer);
+      }
     }
+    API_LAST_ERROR = lastErr;
+    console.warn('API error:', endpoint, lastErr && lastErr.message);
+    // Las escrituras fallidas se notifican: antes fallaban en silencio
+    if(!isRead && !isAuth && typeof showToast === 'function'){
+      showToast(lastErr && lastErr.name === 'AbortError' ? 'Tiempo de espera agotado. Revisa la conexión.' : 'No se pudo guardar. Revisa la conexión.', 'error');
+    }
+    return null;
   },
   getAll:  (m)       => API.call(ENDPOINTS[m],    {action:'getAll'}),
   save:    (m, data) => API.call(ENDPOINTS[m],    {action:'save', data}),
@@ -1691,6 +1715,7 @@ let loginSelectedUser = null;
 let switchSelectedUser = null;
 
 // ═══ HELPERS ═══
+const esc = v => String(v ?? '').replace(/[&<>"'`]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c]));
 const fmt = n => '$' + Math.round(n||0).toLocaleString('es-CL');
 const today = () => new Date().toISOString().split('T')[0];
 const todayLabel = () => new Date().toLocaleDateString('es-CL',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
@@ -1733,10 +1758,10 @@ function renderLoginCashiers(targetId, onSelect){
   const el = document.getElementById(targetId);
   el.innerHTML = usuarios.map(u=>`
     <button class="cashier-btn" id="cb-${targetId}-${u.id}" onclick="${onSelect}(${u.id})">
-      <div class="cashier-avatar ${getColor(u.id)}">${getInitials(u.nombre)}</div>
+      <div class="cashier-avatar ${getColor(u.id)}">${esc(getInitials(u.nombre))}</div>
       <div class="cashier-info">
-        <div class="c-name">${u.nombre}</div>
-        <div class="c-role">${u.rol}</div>
+        <div class="c-name">${esc(u.nombre)}</div>
+        <div class="c-role">${esc(u.rol)}</div>
       </div>
     </button>
   `).join('');
@@ -1974,7 +1999,7 @@ function renderTerminal(){
             <label>Cliente</label>
             <select id="t-cliente" onchange="tCliente=this.value" style="font-size:11px;padding:6px 8px;">
               <option value="">— Sin cliente —</option>
-              ${clientes.map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('')}
+              ${clientes.map(c=>`<option value="${esc(c.nombre)}">${esc(c.nombre)}</option>`).join('')}
             </select>
           </div>
           <div class="t-method-row" id="t-method-row">
@@ -2053,9 +2078,9 @@ function renderTerminalProducts(){
     return `<div class="t-product-card${sinStock?' out':''}" data-prod-id="${p.id}" onclick="${clickFn}" style="position:relative;">
       ${esPeso?`<div style="position:absolute;top:8px;right:8px;font-size:9px;font-weight:700;background:var(--blue-dim);color:var(--blue);border:1px solid rgba(37,99,235,0.2);padding:2px 6px;border-radius:4px;font-family:var(--mono);z-index:1">⚖ PESO</div>`:''}
       ${p.imagen_url
-        ? `<img class="t-prod-img" src="${p.imagen_url}" alt="${p.nombre}" loading="lazy" onerror="this.style.display='none'">`
+        ? `<img class="t-prod-img" src="${esc(p.imagen_url)}" alt="${esc(p.nombre)}" loading="lazy" onerror="this.style.display='none'">`
         : `<div class="t-prod-img-placeholder">🏷</div>`}
-      <div class="t-prod-name" style="padding-right:${esPeso?'36px':'0'}">${p.nombre}</div>
+      <div class="t-prod-name" style="padding-right:${esPeso?'36px':'0'}">${esc(p.nombre)}</div>
       <div class="t-prod-price">${priceLabel}</div>
       <div class="t-prod-stock${p.stock<(esPeso?0.5:5)?' low':''}">${stockLabel}</div>
     </div>`;
@@ -2216,7 +2241,7 @@ function renderCart(){
     if(item.esPeso){
       return `<div class="t-cart-item">
         <div class="t-cart-item-info">
-          <div class="t-cart-item-name">${item.nombre}</div>
+          <div class="t-cart-item-name">${esc(item.nombre)}</div>
           <div class="t-cart-item-price" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
             <span style="background:var(--blue-dim);color:var(--blue);padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;font-family:var(--mono)">⚖ ${item.qtyLabel}</span>
             <span id="price-display-${item.cartId}" class="t-precio-editable" onclick="editPrecio(${item.cartId})" title="Click para editar precio">
@@ -2232,7 +2257,7 @@ function renderCart(){
     }
     return `<div class="t-cart-item">
       <div class="t-cart-item-info">
-        <div class="t-cart-item-name">${item.nombre}</div>
+        <div class="t-cart-item-name">${esc(item.nombre)}</div>
         <div class="t-cart-item-price" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
           <span id="price-display-${item.cartId}" class="t-precio-editable" onclick="editPrecio(${item.cartId})" title="Click para editar precio">
             <span class="t-precio-val">${fmt(item.precio)}</span>
@@ -2321,7 +2346,7 @@ function cobrarVenta(){
   ventas.push(venta);
   DB.set('ventas', ventas);
   DB.sync('ventas', venta);
-  logAudit('Venta registrada', 'Terminal', `${fmt(venta.total)} · ${venta.metodo} · ${venta.items.length} productos`);
+  logAudit('Venta registrada', 'Terminal', `${fmt(venta.total)} · ${esc(venta.metodo)} · ${venta.items.length} productos`);
   incrementDemoVentas();
 
   // Sync stock actualizado de cada producto afectado
@@ -2387,13 +2412,13 @@ function shareBoletaMobile(ventaId){
   if(!venta) return;
   const cfg = DB.get('config') || {};
   const lines = [
-    `🧾 *${cfg.nombre||'Minimarket'}*`,
+    `🧾 *${esc(cfg.nombre||'Minimarket')}*`,
     `📅 ${venta.fecha} ${venta.hora||''}`,
     `─────────────────`,
-    ...venta.items.map(it=>`${it.qty}× ${it.nombre}  ${fmt(it.subtotal)}`),
+    ...venta.items.map(it=>`${it.qty}× ${esc(it.nombre)}  ${fmt(it.subtotal)}`),
     `─────────────────`,
     `*TOTAL: ${fmt(venta.total)}*`,
-    `Método: ${venta.metodo||'—'}`,
+    `Método: ${esc(venta.metodo||'—')}`,
     ``,
     `Gracias por su compra 🙏`
   ].join('\n');
@@ -2480,8 +2505,8 @@ function renderDashboard(){
           ${productos.filter(p=>p.stock<10).slice(0,5).map(p=>`
             <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--bdr);">
               <div>
-                <div style="font-size:13px;font-weight:600;color:var(--text)">${p.nombre}</div>
-                <div style="font-size:11px;color:var(--muted)">${p.unidad}</div>
+                <div style="font-size:13px;font-weight:600;color:var(--text)">${esc(p.nombre)}</div>
+                <div style="font-size:11px;color:var(--muted)">${esc(p.unidad)}</div>
               </div>
               <span class="badge ${p.stock<3?'badge-red':'badge-yellow'}">${p.stock}</span>
             </div>
@@ -2499,7 +2524,7 @@ function renderDashboard(){
             const vencido=new Date(c.vencimiento)<new Date();
             return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--bdr);">
               <div>
-                <div style="font-size:13px;font-weight:600;color:var(--text)">${cl.nombre}</div>
+                <div style="font-size:13px;font-weight:600;color:var(--text)">${esc(cl.nombre)}</div>
                 <div style="font-size:11px;color:${vencido?'var(--red)':'var(--muted)'}">${c.vencimiento||'—'}</div>
               </div>
               <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--acc)">${fmt(c.monto-c.pagado)}</span>
@@ -2520,10 +2545,10 @@ function renderDashboard(){
         <tr><th>#</th><th>Cliente</th><th>Productos</th><th>Método</th><th>Cajero</th><th>Total</th></tr>
         ${ventasHoy.map((v,i)=>`<tr>
           <td class="td-mono td-muted">${String(i+1).padStart(2,'0')}</td>
-          <td>${v.cliente||'<span style="color:var(--muted)">—</span>'}</td>
-          <td style="font-size:11px;line-height:1.8;">${v.items.map(it=>`${it.qty}× ${it.nombre}`).join('<br>')}</td>
-          <td><span class="badge badge-muted">${v.metodo||'—'}</span></td>
-          <td class="td-muted">${v.cajero||'—'}</td>
+          <td>${esc(v.cliente)||'<span style="color:var(--muted)">—</span>'}</td>
+          <td style="font-size:11px;line-height:1.8;">${v.items.map(it=>`${it.qty}× ${esc(it.nombre)}`).join('<br>')}</td>
+          <td><span class="badge badge-muted">${esc(v.metodo||'—')}</span></td>
+          <td class="td-muted">${esc(v.cajero||'—')}</td>
           <td class="td-acc">${fmt(v.total)}</td>
         </tr>`).join('')||'<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);font-size:12px">Sin ventas hoy</td></tr>'}
       </table></div>
@@ -2534,12 +2559,12 @@ function renderDashboard(){
           <div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--radius);padding:14px;margin-bottom:8px;">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
               <div>
-                <div style="font-size:13px;font-weight:700;color:var(--text)">${v.cliente||'Sin cliente'}</div>
-                <div style="font-size:11px;color:var(--muted);margin-top:2px;">${v.cajero||''} · <span class="badge badge-muted" style="font-size:9px">${v.metodo||'—'}</span></div>
+                <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(v.cliente||'Sin cliente')}</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:2px;">${esc(v.cajero||'')} · <span class="badge badge-muted" style="font-size:9px">${esc(v.metodo||'—')}</span></div>
               </div>
               <div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--acc)">${fmt(v.total)}</div>
             </div>
-            <div style="font-size:11px;color:var(--muted);line-height:1.7;">${v.items.map(it=>`${it.qty}× ${it.nombre}`).join(' · ')}</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.7;">${v.items.map(it=>`${it.qty}× ${esc(it.nombre)}`).join(' · ')}</div>
           </div>
         `).join('')}
       </div>
@@ -2569,12 +2594,12 @@ function renderInventario(search=''){
           const margen = ((p.precioVenta-p.precioCompra)/p.precioVenta*100).toFixed(0);
           const stockVal = p.venderPorPeso ? parseFloat(p.stock).toFixed(2)+' kg' : p.stock+' '+p.unidad;
           return `<tr>
-            <td class="td-mono td-muted">${p.sku}</td>
+            <td class="td-mono td-muted">${esc(p.sku)}</td>
             <td><div style="display:flex;align-items:center;gap:10px;">
-              ${p.imagen_url?`<img src="${p.imagen_url}" style="width:36px;height:36px;border-radius:6px;object-fit:cover;border:1px solid var(--bdr);flex-shrink:0;" onerror="this.style.display='none'">`:''}
-              <strong>${p.nombre}</strong>
+              ${p.imagen_url?`<img src="${esc(p.imagen_url)}" style="width:36px;height:36px;border-radius:6px;object-fit:cover;border:1px solid var(--bdr);flex-shrink:0;" onerror="this.style.display='none'">`:''}
+              <strong>${esc(p.nombre)}</strong>
             </div></td>
-            <td style="font-size:11px"><span class="badge badge-muted">${p.categoria||'—'}</span></td>
+            <td style="font-size:11px"><span class="badge badge-muted">${esc(p.categoria||'—')}</span></td>
             <td>${p.venderPorPeso?'<span class="badge badge-blue">⚖ Peso</span>':'<span class="badge badge-muted">Unidad</span>'}</td>
             <td><span class="badge ${parseFloat(p.stock)<(p.venderPorPeso?0.5:3)?'badge-red':parseFloat(p.stock)<(p.venderPorPeso?2:10)?'badge-yellow':'badge-green'}">${stockVal}</span></td>
             <td class="td-mono td-muted">${fmt(p.precioCompra)}</td>
@@ -2602,17 +2627,17 @@ function openProductoModal(p=null){
         <div class="img-upload-wrap" id="img-upload-wrap" onclick="document.getElementById('f-imagen').click()">
           <input type="file" id="f-imagen" accept="image/*" onchange="previewImagen(this)" style="display:none">
           ${p&&p.imagen_url
-            ? `<img class="img-upload-preview" id="img-preview" src="${p.imagen_url}" style="display:block;width:100%;max-height:180px;object-fit:contain;border-radius:var(--radius-sm);">`
+            ? `<img class="img-upload-preview" id="img-preview" src="${esc(p.imagen_url)}" style="display:block;width:100%;max-height:180px;object-fit:contain;border-radius:var(--radius-sm);">`
             : `<img class="img-upload-preview" id="img-preview">`}
           <div class="img-upload-icon" id="img-upload-placeholder" ${p&&p.imagen_url?'style="display:none"':''}>📷</div>
           <div class="img-upload-label" id="img-upload-text" ${p&&p.imagen_url?'style="display:none"':''}>Toca para subir foto</div>
           <button class="img-upload-clear" id="img-clear-btn" ${p&&p.imagen_url?'style="display:flex"':'style="display:none"'} onclick="clearImagen(event)">✕</button>
         </div>
-        <input type="hidden" id="f-imagen-url" value="${p&&p.imagen_url?p.imagen_url:''}">
+        <input type="hidden" id="f-imagen-url" value="${esc(p&&p.imagen_url?p.imagen_url:'')}">
         <input type="hidden" id="f-imagen-base64" value="">
       </div>
-      <div class="form-group"><label>Nombre</label><input id="f-nombre" value="${p?p.nombre:''}" placeholder="Ej: Leche Entera 1L"></div>
-      <div class="form-group"><label>SKU / Código de barras</label><input id="f-sku" value="${p?p.sku:''}" placeholder="LE-001 o código EAN"></div>
+      <div class="form-group"><label>Nombre</label><input id="f-nombre" value="${esc(p?p.nombre:'')}" placeholder="Ej: Leche Entera 1L"></div>
+      <div class="form-group"><label>SKU / Código de barras</label><input id="f-sku" value="${esc(p?p.sku:'')}" placeholder="LE-001 o código EAN"></div>
       <div class="form-group"><label>Precio Compra</label><input id="f-compra" type="number" value="${p?p.precioCompra:''}" placeholder="850"></div>
       <div class="form-group"><label>Precio Venta</label><input id="f-venta" type="number" value="${p?p.precioVenta:''}" placeholder="1200"></div>
       <div class="form-group"><label>Stock</label><input id="f-stock" type="number" value="${p?p.stock:''}" placeholder="0"></div>
@@ -2752,10 +2777,10 @@ function renderClientes(search=''){
         ${clientes.map(c=>{
           const pend = DB.get('cobrar').filter(x=>Number(x.clienteId)===Number(c.id)).reduce((s,x)=>s+(x.monto-x.pagado),0);
           return `<tr>
-            <td><strong>${c.nombre}</strong>${c.nota?`<br><span style="font-size:11px;color:var(--muted)">${c.nota}</span>`:''}</td>
-            <td class="td-mono" style="font-size:11px">${c.rut||'—'}</td>
+            <td><strong>${esc(c.nombre)}</strong>${c.nota?`<br><span style="font-size:11px;color:var(--muted)">${esc(c.nota)}</span>`:''}</td>
+            <td class="td-mono" style="font-size:11px">${esc(c.rut||'—')}</td>
             <td class="td-muted">${c.empresa||'—'}</td>
-            <td class="td-mono">${c.telefono||'—'}</td>
+            <td class="td-mono">${esc(c.telefono||'—')}</td>
             <td style="font-size:12px">${c.ciudad||'—'}</td>
             <td>
               <span class="${pend>0?'td-acc':'td-green'}">${fmt(pend)}</span>
@@ -2777,14 +2802,14 @@ function openClienteModal(c=null){
   openModal(`
     <div class="modal-title">${c?'Editar Cliente':'Nuevo Cliente'}</div>
     <div class="form-grid">
-      <div class="form-group"><label>Nombre completo</label><input id="c-nombre" value="${c?c.nombre:''}" placeholder="Juan Pérez"></div>
+      <div class="form-group"><label>Nombre completo</label><input id="c-nombre" value="${esc(c?c.nombre:'')}" placeholder="Juan Pérez"></div>
       <div class="form-group"><label>Empresa</label><input id="c-empresa" value="${c?(c.empresa||''):''}" placeholder="Minimarket El Sur"></div>
-      <div class="form-group"><label>RUT</label><input id="c-rut" value="${c?c.rut||'':''}" placeholder="12.345.678-9"></div>
-      <div class="form-group"><label>Teléfono</label><input id="c-tel" value="${c?c.telefono:''}" placeholder="+56 9 ..."></div>
-      <div class="form-group"><label>Email</label><input id="c-email" value="${c?c.email:''}" placeholder="juan@empresa.cl"></div>
-      <div class="form-group span2"><label>Dirección</label><input id="c-dir" value="${c?c.direccion:''}" placeholder="Av. Principal 123"></div>
+      <div class="form-group"><label>RUT</label><input id="c-rut" value="${esc(c?c.rut||'':'')}" placeholder="12.345.678-9"></div>
+      <div class="form-group"><label>Teléfono</label><input id="c-tel" value="${esc(c?c.telefono:'')}" placeholder="+56 9 ..."></div>
+      <div class="form-group"><label>Email</label><input id="c-email" value="${esc(c?c.email:'')}" placeholder="juan@empresa.cl"></div>
+      <div class="form-group span2"><label>Dirección</label><input id="c-dir" value="${esc(c?c.direccion:'')}" placeholder="Av. Principal 123"></div>
       <div class="form-group"><label>Ciudad</label><input id="c-ciudad" value="${c?c.ciudad:''}" placeholder="Santiago"></div>
-      <div class="form-group span2"><label>Nota</label><textarea id="c-nota">${c?c.nota:''}</textarea></div>
+      <div class="form-group span2"><label>Nota</label><textarea id="c-nota">${esc(c?c.nota:'')}</textarea></div>
       <div class="form-group"><label>Límite de crédito ($)</label><input id="c-limite" type="number" value="${c?c.limiteCredito||0:0}" placeholder="0 = sin límite"></div>
       <div class="form-group"><label>Días de crédito</label><input id="c-dias" type="number" value="${c?c.diasCredito||0:0}" placeholder="0 = sin crédito"></div>
     </div>
@@ -2830,8 +2855,8 @@ function openCuentasClienteModal(){
         const vencido=new Date(c.vencimiento)<new Date();
         return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bdr);gap:8px;">
           <div>
-            <div style="font-weight:700;font-size:13px">${cl.nombre}</div>
-            <div style="font-size:11px;color:var(--muted)">${c.concepto} · Vence: ${c.vencimiento}</div>
+            <div style="font-weight:700;font-size:13px">${esc(cl.nombre)}</div>
+            <div style="font-size:11px;color:var(--muted)">${esc(c.concepto)} · Vence: ${c.vencimiento}</div>
           </div>
           <div style="display:flex;gap:6px;align-items:center;">
             <span style="font-family:var(--mono);font-weight:700;color:${vencido?'var(--red)':'var(--acc)'}">${fmt(pend)}</span>
@@ -2851,7 +2876,7 @@ function openCuentaClienteModal(clienteId){
   const cl = DB.get('clientes').find(x=>Number(x.id)===Number(clienteId))||{nombre:'—'};
   const totalPend = cobrar.reduce((s,c)=>s+(c.monto-c.pagado),0);
   openModal(`
-    <div class="modal-title">💰 ${cl.nombre}</div>
+    <div class="modal-title">💰 ${esc(cl.nombre)}</div>
     <div style="display:flex;justify-content:space-between;padding:10px 14px;background:var(--acc-dim);border:1px solid var(--acc-bdr);border-radius:var(--radius);margin-bottom:16px;">
       <span style="font-size:12px;color:var(--muted)">Deuda total</span>
       <span style="font-family:var(--mono);font-weight:700;color:var(--acc)">${fmt(totalPend)}</span>
@@ -2861,7 +2886,7 @@ function openCuentaClienteModal(clienteId){
       if(pend<=0) return '';
       return `<div style="padding:10px 0;border-bottom:1px solid var(--bdr)">
         <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-          <span style="font-weight:600;font-size:13px">${c.concepto}</span>
+          <span style="font-weight:600;font-size:13px">${esc(c.concepto)}</span>
           <span style="font-family:var(--mono);color:var(--acc);font-weight:700">${fmt(pend)}</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -2940,10 +2965,10 @@ function renderVentas(filtroFecha){
           <tr><th>#</th><th>Cliente</th><th>Detalle</th><th>Método</th><th>Cajero</th><th>Total</th><th></th></tr>
           ${ventasDia.map((v,i)=>`<tr>
             <td class="td-mono td-muted">${String(i+1).padStart(2,'0')}</td>
-            <td>${v.cliente||'<span style="color:var(--muted)">—</span>'}</td>
-            <td style="font-size:11px;line-height:1.8;">${v.items.map(it=>`${it.qty}× ${it.nombre}`).join('<br>')}</td>
-            <td><span class="badge ${v.metodo&&v.metodo.includes('Efectivo')?'badge-green':v.metodo&&v.metodo.includes('Transferencia')?'badge-blue':'badge-muted'}">${v.metodo||'—'}</span></td>
-            <td class="td-muted">${v.cajero||'—'}</td>
+            <td>${esc(v.cliente)||'<span style="color:var(--muted)">—</span>'}</td>
+            <td style="font-size:11px;line-height:1.8;">${v.items.map(it=>`${it.qty}× ${esc(it.nombre)}`).join('<br>')}</td>
+            <td><span class="badge ${v.metodo&&v.metodo.includes('Efectivo')?'badge-green':v.metodo&&v.metodo.includes('Transferencia')?'badge-blue':'badge-muted'}">${esc(v.metodo||'—')}</span></td>
+            <td class="td-muted">${esc(v.cajero||'—')}</td>
             <td class="td-acc">${fmt(v.total)}</td>
             <td style="display:flex;gap:4px;">
               <button class="btn btn-ghost btn-sm btn-icon" onclick="verDetalle('venta',${v.id})">👁</button>
@@ -2958,15 +2983,15 @@ function renderVentas(filtroFecha){
             <div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--radius);padding:14px;margin-bottom:8px;">
               <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
                 <div>
-                  <div style="font-size:14px;font-weight:700;color:var(--text)">${v.cliente||'Sin cliente'}</div>
+                  <div style="font-size:14px;font-weight:700;color:var(--text)">${esc(v.cliente||'Sin cliente')}</div>
                   <div style="display:flex;gap:6px;margin-top:4px;align-items:center;flex-wrap:wrap;">
-                    <span class="badge ${v.metodo&&v.metodo.includes('Efectivo')?'badge-green':v.metodo&&v.metodo.includes('Transferencia')?'badge-blue':'badge-muted'}" style="font-size:9px;">${v.metodo||'—'}</span>
-                    <span style="font-size:11px;color:var(--muted)">${v.cajero||''}</span>
+                    <span class="badge ${v.metodo&&v.metodo.includes('Efectivo')?'badge-green':v.metodo&&v.metodo.includes('Transferencia')?'badge-blue':'badge-muted'}" style="font-size:9px;">${esc(v.metodo||'—')}</span>
+                    <span style="font-size:11px;color:var(--muted)">${esc(v.cajero||'')}</span>
                   </div>
                 </div>
                 <div style="font-family:var(--mono);font-size:18px;font-weight:800;color:var(--acc)">${fmt(v.total)}</div>
               </div>
-              <div style="font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:10px;">${v.items.map(it=>`${it.qty}× ${it.nombre}`).join(' · ')}</div>
+              <div style="font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:10px;">${v.items.map(it=>`${it.qty}× ${esc(it.nombre)}`).join(' · ')}</div>
               <div style="display:flex;gap:6px;">
                 <button class="btn btn-ghost btn-sm" style="flex:1" onclick="verDetalle('venta',${v.id})">👁 Ver</button>
                 <button class="btn btn-ghost btn-sm btn-icon" onclick="printBoleta(${v.id})">🖨</button>
@@ -3011,7 +3036,7 @@ function renderCobrar(){
           return `<tr>
             <td class="td-mono" style="font-size:11px">${r.fecha}</td>
             <td class="td-mono">${r.factura||'—'}</td>
-            <td>${pv.nombre}</td>
+            <td>${esc(pv.nombre)}</td>
             <td class="td-acc">${fmt(r.monto)}</td>
             <td class="td-mono" style="font-size:11px">${r.vencimiento||'—'}</td>
             <td><span class="badge ${pagada?'badge-green':r.vencimiento&&new Date(r.vencimiento)<new Date()?'badge-red':'badge-yellow'}">${pagada?'Pagada':r.vencimiento&&new Date(r.vencimiento)<new Date()?'Vencida':'Pendiente'}</span></td>
@@ -3038,8 +3063,8 @@ function renderCobrar(){
           const estado = pend===0?'badge-green':vencido?'badge-red':'badge-yellow';
           const estadoTxt = pend===0?'Pagado':vencido?'Vencido':'Pendiente';
           return `<tr>
-            <td><strong>${cl.nombre}</strong><br><span class="td-muted">${cl.empresa||''}</span></td>
-            <td style="font-size:12px">${c.concepto}</td>
+            <td><strong>${esc(cl.nombre)}</strong><br><span class="td-muted">${cl.empresa||''}</span></td>
+            <td style="font-size:12px">${esc(c.concepto)}</td>
             <td class="td-mono" style="font-size:11px">${c.fecha}</td>
             <td class="td-mono" style="font-size:11px">${c.vencimiento}</td>
             <td class="td-mono">${fmt(c.monto)}</td>
@@ -3064,9 +3089,9 @@ function openCobrarModal(c=null){
     <div class="modal-title">${c?'Editar Cuenta':'Nueva Cuenta'}</div>
     <div class="form-grid">
       <div class="form-group span2"><label>Cliente</label>
-        <select id="cb-cliente">${clientes.map(cl=>`<option value="${cl.id}" ${c&&c.clienteId===cl.id?'selected':''}>${cl.nombre}${cl.empresa?' — '+cl.empresa:''}</option>`).join('')}</select>
+        <select id="cb-cliente">${clientes.map(cl=>`<option value="${cl.id}" ${c&&c.clienteId===cl.id?'selected':''}>${esc(cl.nombre)}${cl.empresa?' — '+cl.empresa:''}</option>`).join('')}</select>
       </div>
-      <div class="form-group span2"><label>Concepto</label><input id="cb-concepto" value="${c?c.concepto:''}" placeholder="Descripción del pedido"></div>
+      <div class="form-group span2"><label>Concepto</label><input id="cb-concepto" value="${esc(c?c.concepto:'')}" placeholder="Descripción del pedido"></div>
       <div class="form-group"><label>Monto total</label><input id="cb-monto" type="number" value="${c?c.monto:''}" placeholder="50000"></div>
       <div class="form-group"><label>Fecha</label><input id="cb-fecha" type="date" value="${c?c.fecha:today()}"></div>
       <div class="form-group"><label>Vencimiento</label><input id="cb-vence" type="date" value="${c?c.vencimiento:''}"></div>
@@ -3090,7 +3115,7 @@ function openPagoModal(c){
   openModal(`
     <div class="modal-title">Registrar Pago</div>
     <div class="alert alert-warn">Pendiente: <strong>${fmt(c.monto-c.pagado)}</strong></div>
-    ${c.pagos&&c.pagos.length?`<div style="margin-bottom:16px;"><div style="font-size:10px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Historial</div>${c.pagos.map(p=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:7px 0;border-bottom:1px solid var(--bdr)"><span class="td-muted">${p.fecha}${p.nota?' · '+p.nota:''}</span><span style="color:var(--green);font-family:var(--mono)">${fmt(p.monto)}</span></div>`).join('')}</div>`:''}
+    ${c.pagos&&c.pagos.length?`<div style="margin-bottom:16px;"><div style="font-size:10px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Historial</div>${c.pagos.map(p=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:7px 0;border-bottom:1px solid var(--bdr)"><span class="td-muted">${p.fecha}${esc(p.nota?' · '+p.nota:'')}</span><span style="color:var(--green);font-family:var(--mono)">${fmt(p.monto)}</span></div>`).join('')}</div>`:''}
     <div class="form-grid full">
       <div class="form-group"><label>Monto del pago</label><input id="pg-monto" type="number" placeholder="${c.monto-c.pagado}" max="${c.monto-c.pagado}"></div>
       <div class="form-group"><label>Fecha</label><input id="pg-fecha" type="date" value="${today()}"></div>
@@ -3159,7 +3184,7 @@ function renderCierre(){
           <div class="cierre-block-title">Turnos del día (${turnosHoy.length})</div>
           ${turnosHoy.map((t,i)=>`
             <div class="cierre-row">
-              <span class="cierre-row-label">Turno ${i+1} · ${t.cajero}</span>
+              <span class="cierre-row-label">Turno ${i+1} · ${esc(t.cajero)}</span>
               <div style="display:flex;gap:6px;align-items:center;">
                 <span class="cierre-row-val">${fmt(t.totalVentas)}</span>
                 <button class="btn btn-ghost btn-sm btn-icon" onclick="printCierre(${t.id})">🖨</button>
@@ -3178,7 +3203,7 @@ function renderCierre(){
           </div>
           <button class="btn btn-success btn-lg" style="width:100%;margin-top:14px" onclick="abrirTurno()">Abrir turno</button>
         ` : `
-          <div class="alert alert-success">Turno abierto · Fondo: ${fmt(aperturaActiva.fondo)} · ${aperturaActiva.cajero}</div>
+          <div class="alert alert-success">Turno abierto · Fondo: ${fmt(aperturaActiva.fondo)} · ${esc(aperturaActiva.cajero)}</div>
           <div class="form-grid full" style="gap:12px;margin-top:12px">
             <div class="form-group"><label>Conteo real de billetes al cerrar</label><input type="number" id="cierre-conteo" placeholder="0" oninput="calcCierre()"></div>
             <div class="form-group"><label>Nota del cierre</label><input id="cierre-nota" placeholder="Observaciones..."></div>
@@ -3206,7 +3231,7 @@ function renderCierre(){
         <tr><th>Fecha</th><th>Cajero</th><th>Fondo</th><th>Ventas</th><th>Efectivo</th><th>Esperado</th><th>Real</th><th>Diferencia</th><th></th></tr>
         ${[...cierres].reverse().map(c=>`<tr>
           <td class="td-mono" style="font-size:11px">${c.fecha}</td>
-          <td style="font-size:12px">${c.cajero}</td>
+          <td style="font-size:12px">${esc(c.cajero)}</td>
           <td class="td-muted">${fmt(c.fondoInicial)}</td>
           <td class="td-acc">${fmt(c.totalVentas)}</td>
           <td class="td-green">${fmt(c.ventasEfectivo)}</td>
@@ -3227,7 +3252,7 @@ function abrirTurno(){
   const aperturas = DB.get('aperturas')||[];
   aperturas.push(apertura);
   DB.set('aperturas',aperturas);
-  logAudit('Turno abierto','Caja',`Fondo: ${fmt(fondo)} · ${session?.nombre}`);
+  logAudit('Turno abierto','Caja',`Fondo: ${fmt(fondo)} · ${esc(session?.nombre)}`);
   renderCierre();
 }
 function calcApertura(){
@@ -3296,11 +3321,11 @@ function renderUsuarios(){
     <div>
       ${usuarios.map(u=>`
         <div class="user-card">
-          <div class="user-card-avatar ${getColor(u.id)}">${getInitials(u.nombre)}</div>
+          <div class="user-card-avatar ${getColor(u.id)}">${esc(getInitials(u.nombre))}</div>
           <div class="user-card-info">
-            <div class="user-card-name">${u.nombre}</div>
+            <div class="user-card-name">${esc(u.nombre)}</div>
             <div class="user-card-meta">
-              <span class="badge ${u.rol==='Administrador'?'badge-acc':u.rol==='Supervisor'?'badge-blue':'badge-muted'}" style="margin-right:6px">${u.rol}</span>
+              <span class="badge ${u.rol==='Administrador'?'badge-acc':u.rol==='Supervisor'?'badge-blue':'badge-muted'}" style="margin-right:6px">${esc(u.rol)}</span>
               ${u.pin?'<span class="badge badge-blue" style="margin-right:4px">PIN activo</span>':'<span class="badge badge-muted" style="margin-right:4px">Sin PIN</span>'}
               ${u.rol!=='Administrador'?`<span class="badge badge-muted">${Object.values(u.permisos||{}).filter(Boolean).length} permisos</span>`:'<span class="badge badge-acc">Acceso total</span>'}
             </div>
@@ -3328,7 +3353,7 @@ function openUsuarioModal(u=null){
   openModal(`
     <div class="modal-title">${u?'Editar Usuario':'Nuevo Usuario'}</div>
     <div class="form-grid">
-      <div class="form-group span2"><label>Nombre completo</label><input id="u-nombre" value="${u?u.nombre:''}" placeholder="María González"></div>
+      <div class="form-group span2"><label>Nombre completo</label><input id="u-nombre" value="${esc(u?u.nombre:'')}" placeholder="María González"></div>
       <div class="form-group"><label>Rol</label>
         <select id="u-rol">
           <option ${u&&u.rol==='Cajero'?'selected':''}>Cajero</option>
@@ -3440,10 +3465,10 @@ function renderCalendario(){
         <tr><th>#</th><th>Cliente</th><th>Detalle</th><th>Método</th><th>Cajero</th><th>Total</th><th></th></tr>
         ${ventasDia.map((v,i)=>`<tr>
           <td class="td-mono td-muted">${String(i+1).padStart(2,'0')}</td>
-          <td>${v.cliente||'<span style="color:var(--muted)">—</span>'}</td>
-          <td style="font-size:11.5px;line-height:1.8;">${v.items.map(it=>`${it.qty}× ${it.nombre}`).join('<br>')}</td>
-          <td><span class="badge ${v.metodo==='Efectivo'?'badge-green':v.metodo==='Transferencia'?'badge-blue':'badge-muted'}">${v.metodo||'—'}</span></td>
-          <td class="td-muted">${v.cajero||'—'}</td>
+          <td>${esc(v.cliente)||'<span style="color:var(--muted)">—</span>'}</td>
+          <td style="font-size:11.5px;line-height:1.8;">${v.items.map(it=>`${it.qty}× ${esc(it.nombre)}`).join('<br>')}</td>
+          <td><span class="badge ${v.metodo==='Efectivo'?'badge-green':v.metodo==='Transferencia'?'badge-blue':'badge-muted'}">${esc(v.metodo||'—')}</span></td>
+          <td class="td-muted">${esc(v.cajero||'—')}</td>
           <td class="td-acc">${fmt(v.total)}</td>
           <td style="display:flex;gap:4px"><button class="btn btn-ghost btn-sm" onclick="printBoleta(${v.id})">🖨</button>${DB.get('config')?.whatsapp?`<button class="btn btn-success btn-sm" onclick="sendBoletaWhatsapp(${v.id})">💬</button>`:''}</td>
         </tr>`).join('')}
@@ -3457,8 +3482,8 @@ function renderCalendario(){
         ${cobrarVenc.map(c=>{
           const cl = clientes.find(x=>Number(x.id)===Number(c.clienteId))||{nombre:'—'};
           return `<tr>
-            <td><strong>${cl.nombre}</strong></td>
-            <td>${c.concepto}</td>
+            <td><strong>${esc(cl.nombre)}</strong></td>
+            <td>${esc(c.concepto)}</td>
             <td class="td-acc">${fmt(c.monto-c.pagado)}</td>
             <td><button class="btn btn-primary btn-sm" onclick='openPagoModal(${JSON.stringify(c)})'>Registrar pago</button></td>
           </tr>`;
@@ -3488,10 +3513,10 @@ function renderProveedores(search=''){
         ${proveedores.map(p=>{
           const pend = DB.get('pagar').filter(x=>Number(x.proveedorId)===Number(p.id)).reduce((s,x)=>s+(x.monto-x.pagado),0);
           return `<tr>
-            <td><strong>${p.nombre}</strong>${p.nota?`<br><span style="font-size:11px;color:var(--muted)">${p.nota}</span>`:''}</td>
-            <td class="td-mono" style="font-size:11px">${p.rut||'—'}</td>
-            <td class="td-muted">${p.contacto||'—'}</td>
-            <td class="td-mono">${p.telefono||'—'}</td>
+            <td><strong>${esc(p.nombre)}</strong>${p.nota?`<br><span style="font-size:11px;color:var(--muted)">${esc(p.nota)}</span>`:''}</td>
+            <td class="td-mono" style="font-size:11px">${esc(p.rut||'—')}</td>
+            <td class="td-muted">${esc(p.contacto||'—')}</td>
+            <td class="td-mono">${esc(p.telefono||'—')}</td>
             <td style="font-size:12px">${p.ciudad||'—'}</td>
             <td class="${pend>0?'td-red':'td-green'}">${fmt(pend)}</td>
             <td style="white-space:nowrap;display:flex;gap:4px;">
@@ -3509,14 +3534,14 @@ function openProveedorModal(p=null){
   openModal(`
     <div class="modal-title">${p?'Editar Proveedor':'Nuevo Proveedor'}</div>
     <div class="form-grid">
-      <div class="form-group"><label>Nombre empresa</label><input id="pv-nombre" value="${p?p.nombre:''}" placeholder="Lácteos del Sur"></div>
-      <div class="form-group"><label>Contacto</label><input id="pv-contacto" value="${p?p.contacto||'':''}" placeholder="Carlos Muñoz"></div>
-      <div class="form-group"><label>RUT</label><input id="pv-rut" value="${p?p.rut||'':''}" placeholder="12.345.678-9"></div>
-      <div class="form-group"><label>Teléfono</label><input id="pv-tel" value="${p?p.telefono||'':''}" placeholder="+56 9 ..."></div>
-      <div class="form-group"><label>Email</label><input id="pv-email" value="${p?p.email||'':''}" placeholder="proveedor@empresa.cl"></div>
-      <div class="form-group span2"><label>Dirección</label><input id="pv-dir" value="${p?p.direccion||'':''}" placeholder="Av. Principal 123"></div>
+      <div class="form-group"><label>Nombre empresa</label><input id="pv-nombre" value="${esc(p?p.nombre:'')}" placeholder="Lácteos del Sur"></div>
+      <div class="form-group"><label>Contacto</label><input id="pv-contacto" value="${esc(p?p.contacto||'':'')}" placeholder="Carlos Muñoz"></div>
+      <div class="form-group"><label>RUT</label><input id="pv-rut" value="${esc(p?p.rut||'':'')}" placeholder="12.345.678-9"></div>
+      <div class="form-group"><label>Teléfono</label><input id="pv-tel" value="${esc(p?p.telefono||'':'')}" placeholder="+56 9 ..."></div>
+      <div class="form-group"><label>Email</label><input id="pv-email" value="${esc(p?p.email||'':'')}" placeholder="proveedor@empresa.cl"></div>
+      <div class="form-group span2"><label>Dirección</label><input id="pv-dir" value="${esc(p?p.direccion||'':'')}" placeholder="Av. Principal 123"></div>
       <div class="form-group"><label>Ciudad</label><input id="pv-ciudad" value="${p?p.ciudad||'':''}" placeholder="Santiago"></div>
-      <div class="form-group span2"><label>Nota</label><textarea id="pv-nota">${p?p.nota||'':''}</textarea></div>
+      <div class="form-group span2"><label>Nota</label><textarea id="pv-nota">${esc(p?p.nota||'':'')}</textarea></div>
     </div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
@@ -3566,8 +3591,8 @@ function renderPagar(){
           const estado = pend===0?'badge-green':vencido?'badge-red':'badge-yellow';
           const estadoTxt = pend===0?'Pagado':vencido?'Vencido':'Pendiente';
           return `<tr>
-            <td><strong>${pv.nombre}</strong></td>
-            <td style="font-size:12px">${c.concepto}</td>
+            <td><strong>${esc(pv.nombre)}</strong></td>
+            <td style="font-size:12px">${esc(c.concepto)}</td>
             <td class="td-mono" style="font-size:11px">${c.fecha}</td>
             <td class="td-mono" style="font-size:11px">${c.vencimiento}</td>
             <td class="td-mono">${fmt(c.monto)}</td>
@@ -3591,9 +3616,9 @@ function openPagarModal(c=null){
     <div class="modal-title">${c?'Editar Cuenta':'Nueva Cuenta por Pagar'}</div>
     <div class="form-grid">
       <div class="form-group span2"><label>Proveedor</label>
-        <select id="pg-prov">${proveedores.map(pv=>`<option value="${pv.id}" ${c&&c.proveedorId===pv.id?'selected':''}>${pv.nombre}</option>`).join('')}</select>
+        <select id="pg-prov">${proveedores.map(pv=>`<option value="${pv.id}" ${c&&c.proveedorId===pv.id?'selected':''}>${esc(pv.nombre)}</option>`).join('')}</select>
       </div>
-      <div class="form-group span2"><label>Concepto</label><input id="pg-concepto" value="${c?c.concepto:''}" placeholder="Pedido semanal quesos"></div>
+      <div class="form-group span2"><label>Concepto</label><input id="pg-concepto" value="${esc(c?c.concepto:'')}" placeholder="Pedido semanal quesos"></div>
       <div class="form-group"><label>Monto total</label><input id="pg-monto" type="number" value="${c?c.monto:''}" placeholder="85000"></div>
       <div class="form-group"><label>Fecha</label><input id="pg-fecha" type="date" value="${c?c.fecha:today()}"></div>
       <div class="form-group"><label>Vencimiento</label><input id="pg-vence" type="date" value="${c?c.vencimiento:''}"></div>
@@ -3616,7 +3641,7 @@ function openPagoProvModal(c){
   openModal(`
     <div class="modal-title">Registrar Pago a Proveedor</div>
     <div class="alert alert-warn">Pendiente: <strong>${fmt(c.monto-c.pagado)}</strong></div>
-    ${c.pagos&&c.pagos.length?`<div style="margin-bottom:16px;"><div style="font-size:10px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Historial</div>${c.pagos.map(p=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:7px 0;border-bottom:1px solid var(--bdr)"><span class="td-muted">${p.fecha}${p.nota?' · '+p.nota:''}</span><span style="color:var(--green);font-family:var(--mono)">${fmt(p.monto)}</span></div>`).join('')}</div>`:''}
+    ${c.pagos&&c.pagos.length?`<div style="margin-bottom:16px;"><div style="font-size:10px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Historial</div>${c.pagos.map(p=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:7px 0;border-bottom:1px solid var(--bdr)"><span class="td-muted">${p.fecha}${esc(p.nota?' · '+p.nota:'')}</span><span style="color:var(--green);font-family:var(--mono)">${fmt(p.monto)}</span></div>`).join('')}</div>`:''}
     <div class="form-grid full">
       <div class="form-group"><label>Monto del pago</label><input id="pp-monto" type="number" placeholder="${c.monto-c.pagado}"></div>
       <div class="form-group"><label>Fecha</label><input id="pp-fecha" type="date" value="${today()}"></div>
@@ -3678,22 +3703,22 @@ function printBoleta(ventaId){
     </style>
   </head><body>
     <div class="center">
-      ${cfg.logo?`<img src="${cfg.logo}" style="max-width:120px;max-height:50px;object-fit:contain;margin-bottom:6px"><br>`:''}
+      ${cfg.logo?`<img src="${esc(cfg.logo)}" style="max-width:120px;max-height:50px;object-fit:contain;margin-bottom:6px"><br>`:''}
       <div class="title">${biz}</div>
-      ${cfg.rut?`<div class="small">RUT: ${cfg.rut}</div>`:''}
-      ${cfg.direccion?`<div class="small">${cfg.direccion}</div>`:''}
-      ${cfg.telefono?`<div class="small">Tel: ${cfg.telefono}</div>`:''}
+      ${cfg.rut?`<div class="small">RUT: ${esc(cfg.rut)}</div>`:''}
+      ${cfg.direccion?`<div class="small">${esc(cfg.direccion)}</div>`:''}
+      ${cfg.telefono?`<div class="small">Tel: ${esc(cfg.telefono)}</div>`:''}
     </div>
     <div class="divider"></div>
     <div class="row"><span>Boleta #</span><span>${String(ventaId).slice(-6)}</span></div>
     <div class="row"><span>Fecha:</span><span>${venta.fecha}</span></div>
-    <div class="row"><span>Cajero:</span><span>${venta.cajero||'—'}</span></div>
-    ${venta.cliente?`<div class="row"><span>Cliente:</span><span>${venta.cliente}</span></div>`:''}
-    <div class="row"><span>Método:</span><span>${venta.metodo||'—'}</span></div>
+    <div class="row"><span>Cajero:</span><span>${esc(venta.cajero||'—')}</span></div>
+    ${venta.cliente?`<div class="row"><span>Cliente:</span><span>${esc(venta.cliente)}</span></div>`:''}
+    <div class="row"><span>Método:</span><span>${esc(venta.metodo||'—')}</span></div>
     <div class="divider"></div>
     <div style="margin-bottom:8px;font-weight:bold;">DETALLE</div>
     ${venta.items.map(it=>`
-      <div class="row"><span>${it.nombre}</span></div>
+      <div class="row"><span>${esc(it.nombre)}</span></div>
       <div class="row"><span class="small">${it.qty} × $${Math.round(it.precio).toLocaleString('es-CL')}</span><span>$${Math.round(it.subtotal).toLocaleString('es-CL')}</span></div>
     `).join('')}
     <div class="divider"></div>
@@ -3715,11 +3740,11 @@ function printCierre(cierreId){
   .center{text-align:center;}.divider{border-top:1px dashed #000;margin:10px 0;}.row{display:flex;justify-content:space-between;padding:4px 0;}
   .total{display:flex;justify-content:space-between;padding:6px 0;font-size:16px;font-weight:bold;}@media print{body{padding:0;}}</style></head><body>
   <div class="center"><div style="font-size:16px;font-weight:bold">${cfg.businessName||'Mi Negocio'}</div>
-  ${cfg.rut?`<div style="font-size:11px">RUT: ${cfg.rut}</div>`:''}
+  ${cfg.rut?`<div style="font-size:11px">RUT: ${esc(cfg.rut)}</div>`:''}
   <div style="font-size:14px;font-weight:bold;margin-top:8px">CIERRE DE CAJA</div></div>
   <div class="divider"></div>
   <div class="row"><span>Fecha:</span><span>${c.fecha}</span></div>
-  <div class="row"><span>Cajero:</span><span>${c.cajero}</span></div>
+  <div class="row"><span>Cajero:</span><span>${esc(c.cajero)}</span></div>
   <div class="divider"></div>
   <div class="row"><span>Total ventas:</span><span>$${Math.round(c.totalVentas).toLocaleString('es-CL')}</span></div>
   <div class="row"><span>Ventas efectivo:</span><span>$${Math.round(c.ventasEfectivo).toLocaleString('es-CL')}</span></div>
@@ -3728,7 +3753,7 @@ function printCierre(cierreId){
   <div class="row"><span>Conteo real:</span><span>$${Math.round(c.conteoReal).toLocaleString('es-CL')}</span></div>
   <div class="divider"></div>
   <div class="total"><span>${c.diferencia>=0?'SOBRANTE':'FALTANTE'}</span><span>$${Math.round(Math.abs(c.diferencia)).toLocaleString('es-CL')}</span></div>
-  ${c.nota?`<div class="divider"></div><div style="font-size:11px">Nota: ${c.nota}</div>`:''}
+  ${c.nota?`<div class="divider"></div><div style="font-size:11px">Nota: ${esc(c.nota)}</div>`:''}
   <script>window.onload=()=>{window.print();}<\/script></body></html>`);
   win.document.close();
 }
@@ -3742,7 +3767,7 @@ function sendCierreWhatsapp(){
   if(!wa){ alert('Configura el WhatsApp en Configuración → Sistema'); return; }
   const lines = [
     `*${cfg.businessName||'Mi Negocio'} — Cierre ${c.fecha}*`,
-    `Cajero: ${c.cajero}`,
+    `Cajero: ${esc(c.cajero)}`,
     '─────────────────',
     `Ventas del día: $${Math.round(c.totalVentas).toLocaleString('es-CL')}`,
     `Ventas efectivo: $${Math.round(c.ventasEfectivo).toLocaleString('es-CL')}`,
@@ -3763,10 +3788,10 @@ function sendBoletaWhatsapp(ventaId){
     `*${cfg.businessName||'Mi Negocio'}*`,
     `Boleta #${String(ventaId).slice(-6)} · ${venta.fecha}`,
     '─────────────────',
-    ...venta.items.map(it=>`${it.qty}× ${it.nombre} — $${Math.round(it.subtotal).toLocaleString('es-CL')}`),
+    ...venta.items.map(it=>`${it.qty}× ${esc(it.nombre)} — $${Math.round(it.subtotal).toLocaleString('es-CL')}`),
     '─────────────────',
     `*TOTAL: $${Math.round(venta.total).toLocaleString('es-CL')}*`,
-    `Método: ${venta.metodo||'—'}`,
+    `Método: ${esc(venta.metodo||'—')}`,
     '¡Gracias por su compra!'
   ];
   const msg = encodeURIComponent(lines.join('\n'));
@@ -3786,7 +3811,7 @@ function exportExcel(tipo){
       Cliente: v.cliente||'',
       Cajero: v.cajero||'',
       Método: v.metodo||'',
-      Productos: v.items.map(i=>`${i.qty}x ${i.nombre}`).join(' | '),
+      Productos: v.items.map(i=>`${i.qty}x ${esc(i.nombre)}`).join(' | '),
       Total: v.total
     }));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Ventas');
@@ -4096,7 +4121,7 @@ function openDescuentoModal(cartId){
   if(!item) return;
   const precioBase = item.precioOriginal || item.precio;
   openModal(`
-    <div class="modal-title">% Descuento — ${item.nombre}</div>
+    <div class="modal-title">% Descuento — ${esc(item.nombre)}</div>
     <div style="text-align:center;margin-bottom:20px;">
       <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Precio base</div>
       <div style="font-family:var(--mono);font-size:24px;font-weight:700;color:var(--text)">${fmt(precioBase)}</div>
@@ -4361,7 +4386,7 @@ async function authRegister(){
     const res = await fetch(ENDPOINTS.auth, {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ action:'register', nombre_negocio: nombre, email, password: pass, _key: getApiKey() })
+      body: JSON.stringify({ action:'register', nombre_negocio: nombre, email, password: pass })
     });
     const json = await res.json();
     const data = Array.isArray(json.data) ? json.data[0] : (json.data || json);
@@ -4952,11 +4977,11 @@ function renderGastos(){
         <tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Método</th><th>Monto</th><th>Cajero</th><th></th></tr>
         ${gastos.sort((a,b)=>b.fecha.localeCompare(a.fecha)).map(g=>`<tr>
           <td class="td-mono" style="font-size:11px">${g.fecha}</td>
-          <td><strong>${g.concepto}</strong>${g.nota?`<br><span style="font-size:11px;color:var(--muted)">${g.nota}</span>`:''}</td>
-          <td><span class="badge badge-red">${g.categoria}</span></td>
+          <td><strong>${esc(g.concepto)}</strong>${g.nota?`<br><span style="font-size:11px;color:var(--muted)">${esc(g.nota)}</span>`:''}</td>
+          <td><span class="badge badge-red">${esc(g.categoria)}</span></td>
           <td><span class="badge badge-muted">${g.metodo||'Efectivo'}</span></td>
           <td class="td-red">${fmt(g.monto)}</td>
-          <td class="td-muted">${g.cajero||'—'}</td>
+          <td class="td-muted">${esc(g.cajero||'—')}</td>
           <td><button class="btn btn-danger btn-sm btn-icon" onclick="deleteGasto(${g.id})">🗑</button></td>
         </tr>`).join('')||'<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);font-size:12px">Sin gastos registrados</td></tr>'}
       </table></div>
@@ -4989,7 +5014,7 @@ function saveGasto(){
   gastos.push(g);
   DB.set('gastos',gastos);
   DB.sync('gastos', g);
-  logAudit('Gasto registrado','Gastos',`${g.concepto} · ${fmt(g.monto)}`);
+  logAudit('Gasto registrado','Gastos',`${esc(g.concepto)} · ${fmt(g.monto)}`);
   closeModal(); renderGastos();
 }
 function deleteGasto(id){
@@ -5111,9 +5136,9 @@ function renderAuditoria(){
         ${log.length ? log.map(e=>`
           <div class="audit-row">
             <div class="audit-time">${new Date(e.timestamp).toLocaleString('es-CL')}</div>
-            <div class="audit-user">${e.usuario}</div>
+            <div class="audit-user">${esc(e.usuario)}</div>
             <div class="audit-action">${e.accion} · <span style="color:var(--muted)">${e.modulo}</span></div>
-            <div class="audit-detail">${e.detalle||''}</div>
+            <div class="audit-detail">${esc(e.detalle||'')}</div>
           </div>
         `).join('') : '<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">Sin registros de auditoría aún</div>'}
       </div>
@@ -5129,17 +5154,17 @@ function renderConfiguracion(){
       <div class="config-section-title">Datos del negocio (aparecen en boletas)</div>
       <div class="form-grid">
         <div class="form-group"><label>Nombre del negocio</label><input id="cfg-name" value="${cfg.businessName||''}" placeholder="Mi Minimarket"></div>
-        <div class="form-group"><label>RUT</label><input id="cfg-rut" value="${cfg.rut||''}" placeholder="12.345.678-9"></div>
-        <div class="form-group span2"><label>Dirección</label><input id="cfg-dir" value="${cfg.direccion||''}" placeholder="Av. Principal 123, Santiago"></div>
-        <div class="form-group"><label>Teléfono</label><input id="cfg-tel" value="${cfg.telefono||''}" placeholder="+56 9 ..."></div>
-        <div class="form-group"><label>Email</label><input id="cfg-email" value="${cfg.email||''}" placeholder="negocio@email.cl"></div>
+        <div class="form-group"><label>RUT</label><input id="cfg-rut" value="${esc(cfg.rut||'')}" placeholder="12.345.678-9"></div>
+        <div class="form-group span2"><label>Dirección</label><input id="cfg-dir" value="${esc(cfg.direccion||'')}" placeholder="Av. Principal 123, Santiago"></div>
+        <div class="form-group"><label>Teléfono</label><input id="cfg-tel" value="${esc(cfg.telefono||'')}" placeholder="+56 9 ..."></div>
+        <div class="form-group"><label>Email</label><input id="cfg-email" value="${esc(cfg.email||'')}" placeholder="negocio@email.cl"></div>
         <div class="form-group span2"><label>WhatsApp para envíos (solo números, ej: 56912345678)</label><input id="cfg-wa" value="${cfg.whatsapp||''}" placeholder="56912345678"></div>
       </div>
     </div>
     <div class="config-section">
       <div class="config-section-title">Logo del negocio</div>
       <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
-        ${cfg.logo?`<img src="${cfg.logo}" class="logo-preview" id="logo-prev">`:`<div id="logo-prev" style="width:120px;height:60px;background:var(--sur2);border:1.5px dashed var(--dim);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted)">Sin logo</div>`}
+        ${cfg.logo?`<img src="${esc(cfg.logo)}" class="logo-preview" id="logo-prev">`:`<div id="logo-prev" style="width:120px;height:60px;background:var(--sur2);border:1.5px dashed var(--dim);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted)">Sin logo</div>`}
         <div>
           <input type="file" id="logo-file" accept="image/*" style="display:none" onchange="handleLogoUpload(this)">
           <button class="btn btn-ghost btn-sm" onclick="document.getElementById('logo-file').click()">📷 Subir logo</button>
@@ -5198,7 +5223,7 @@ function openRecepcionModal(){
       <div class="form-group"><label>Proveedor</label>
         <select id="rec-prov">
           <option value="">— Sin proveedor —</option>
-          ${proveedores.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('')}
+          ${proveedores.map(p=>`<option value="${p.id}">${esc(p.nombre)}</option>`).join('')}
         </select>
       </div>
       <div class="form-group"><label>N° Factura</label><input id="rec-factura" placeholder="FAC-001234"></div>
@@ -5229,7 +5254,7 @@ function addRecepcionItem(){
   div.innerHTML=`
     <select class="rec-prod" style="flex:2;min-width:150px" onchange="calcRecepcionTotal()">
       <option value="">Selecciona producto...</option>
-      ${productos.map(p=>`<option value="${p.id}" data-costo="${p.precioCompra}" data-nombre="${p.nombre}">${p.nombre}</option>`).join('')}
+      ${productos.map(p=>`<option value="${p.id}" data-costo="${p.precioCompra}" data-nombre="${esc(p.nombre)}">${esc(p.nombre)}</option>`).join('')}
     </select>
     <input class="rec-qty" type="number" min="0.001" step="0.001" value="1" style="width:70px" placeholder="Cant." oninput="calcRecepcionTotal()">
     <input class="rec-costo" type="number" style="width:90px" placeholder="Costo unit." oninput="calcRecepcionTotal()">
@@ -5326,56 +5351,56 @@ function verDetalle(tipo, id){
     if(!v) return;
     titulo = `Venta #${String(id).slice(-6)}`;
     html = `
-      <div class="center"><div class="title">${biz}</div>${cfg.rut?`<div class="small">RUT: ${cfg.rut}</div>`:''}${cfg.direccion?`<div class="small">${cfg.direccion}</div>`:''}${cfg.telefono?`<div class="small">Tel: ${cfg.telefono}</div>`:''}</div>
+      <div class="center"><div class="title">${biz}</div>${cfg.rut?`<div class="small">RUT: ${esc(cfg.rut)}</div>`:''}${cfg.direccion?`<div class="small">${esc(cfg.direccion)}</div>`:''}${cfg.telefono?`<div class="small">Tel: ${esc(cfg.telefono)}</div>`:''}</div>
       <div class="divider"></div>
       <div class="row"><span>Venta #</span><span>${String(id).slice(-6)}</span></div>
       <div class="row"><span>Fecha:</span><span>${v.fecha}</span></div>
-      <div class="row"><span>Cajero:</span><span>${v.cajero||'—'}</span></div>
-      ${v.cliente?`<div class="row"><span>Cliente:</span><span>${v.cliente}</span></div>`:''}
-      <div class="row"><span>Método:</span><span>${v.metodo||'—'}</span></div>
+      <div class="row"><span>Cajero:</span><span>${esc(v.cajero||'—')}</span></div>
+      ${v.cliente?`<div class="row"><span>Cliente:</span><span>${esc(v.cliente)}</span></div>`:''}
+      <div class="row"><span>Método:</span><span>${esc(v.metodo||'—')}</span></div>
       <div class="divider"></div>
       <div style="font-weight:bold;margin-bottom:8px">DETALLE</div>
-      ${v.items.map(it=>`<div class="row"><span>${it.nombre}</span></div><div class="row"><span class="small">${it.qty} × $${Math.round(it.precio).toLocaleString('es-CL')}</span><span>$${Math.round(it.subtotal).toLocaleString('es-CL')}</span></div>`).join('')}
+      ${v.items.map(it=>`<div class="row"><span>${esc(it.nombre)}</span></div><div class="row"><span class="small">${it.qty} × $${Math.round(it.precio).toLocaleString('es-CL')}</span><span>$${Math.round(it.subtotal).toLocaleString('es-CL')}</span></div>`).join('')}
       <div class="divider"></div>
       <div class="total"><span>TOTAL</span><span>$${Math.round(v.total).toLocaleString('es-CL')}</span></div>`;
   }
   else if(tipo==='cliente'){
     const c = DB.get('clientes').find(x=>Number(x.id)===Number(id));
     if(!c) return;
-    titulo = `Cliente: ${c.nombre}`;
+    titulo = `Cliente: ${esc(c.nombre)}`;
     const deuda = DB.get('cobrar').filter(x=>Number(x.clienteId)===Number(c.id)).reduce((s,x)=>s+(x.monto-x.pagado),0);
     const ventas = DB.get('ventas').filter(v=>v.cliente===c.nombre);
     const totalVentas = ventas.reduce((s,v)=>s+v.total,0);
     html = `
-      <div class="center"><div class="title">${c.nombre}</div>${c.empresa?`<div class="small">${c.empresa}</div>`:''}</div>
+      <div class="center"><div class="title">${esc(c.nombre)}</div>${c.empresa?`<div class="small">${c.empresa}</div>`:''}</div>
       <div class="divider"></div>
-      ${c.rut?`<div class="row"><span>RUT:</span><span>${c.rut}</span></div>`:''}
-      ${c.telefono?`<div class="row"><span>Teléfono:</span><span>${c.telefono}</span></div>`:''}
-      ${c.email?`<div class="row"><span>Email:</span><span>${c.email}</span></div>`:''}
-      ${c.direccion?`<div class="row"><span>Dirección:</span><span>${c.direccion}</span></div>`:''}
+      ${c.rut?`<div class="row"><span>RUT:</span><span>${esc(c.rut)}</span></div>`:''}
+      ${c.telefono?`<div class="row"><span>Teléfono:</span><span>${esc(c.telefono)}</span></div>`:''}
+      ${c.email?`<div class="row"><span>Email:</span><span>${esc(c.email)}</span></div>`:''}
+      ${c.direccion?`<div class="row"><span>Dirección:</span><span>${esc(c.direccion)}</span></div>`:''}
       ${c.ciudad?`<div class="row"><span>Ciudad:</span><span>${c.ciudad}</span></div>`:''}
       ${c.limiteCredito?`<div class="row"><span>Límite crédito:</span><span>$${c.limiteCredito.toLocaleString('es-CL')}</span></div>`:''}
       <div class="divider"></div>
       <div class="total"><span>Total compras</span><span>$${Math.round(totalVentas).toLocaleString('es-CL')}</span></div>
       <div class="total"><span>Deuda pendiente</span><span>$${Math.round(deuda).toLocaleString('es-CL')}</span></div>
-      ${c.nota?`<div class="divider"></div><div class="small">${c.nota}</div>`:''}`;
+      ${c.nota?`<div class="divider"></div><div class="small">${esc(c.nota)}</div>`:''}`;
   }
   else if(tipo==='proveedor'){
     const p = DB.get('proveedores').find(x=>Number(x.id)===Number(id));
     if(!p) return;
-    titulo = `Proveedor: ${p.nombre}`;
+    titulo = `Proveedor: ${esc(p.nombre)}`;
     const deuda = DB.get('pagar').filter(x=>Number(x.proveedorId)===Number(p.id)).reduce((s,x)=>s+(x.monto-x.pagado),0);
     html = `
-      <div class="center"><div class="title">${p.nombre}</div></div>
+      <div class="center"><div class="title">${esc(p.nombre)}</div></div>
       <div class="divider"></div>
-      ${p.rut?`<div class="row"><span>RUT:</span><span>${p.rut}</span></div>`:''}
-      ${p.contacto?`<div class="row"><span>Contacto:</span><span>${p.contacto}</span></div>`:''}
-      ${p.telefono?`<div class="row"><span>Teléfono:</span><span>${p.telefono}</span></div>`:''}
-      ${p.email?`<div class="row"><span>Email:</span><span>${p.email}</span></div>`:''}
-      ${p.direccion?`<div class="row"><span>Dirección:</span><span>${p.direccion}</span></div>`:''}
+      ${p.rut?`<div class="row"><span>RUT:</span><span>${esc(p.rut)}</span></div>`:''}
+      ${p.contacto?`<div class="row"><span>Contacto:</span><span>${esc(p.contacto)}</span></div>`:''}
+      ${p.telefono?`<div class="row"><span>Teléfono:</span><span>${esc(p.telefono)}</span></div>`:''}
+      ${p.email?`<div class="row"><span>Email:</span><span>${esc(p.email)}</span></div>`:''}
+      ${p.direccion?`<div class="row"><span>Dirección:</span><span>${esc(p.direccion)}</span></div>`:''}
       <div class="divider"></div>
       <div class="total"><span>Por pagar</span><span>$${Math.round(deuda).toLocaleString('es-CL')}</span></div>
-      ${p.nota?`<div class="divider"></div><div class="small">${p.nota}</div>`:''}`;
+      ${p.nota?`<div class="divider"></div><div class="small">${esc(p.nota)}</div>`:''}`;
   }
   else if(tipo==='cobrar'){
     const c = DB.get('cobrar').find(x=>Number(x.id)===Number(id));
@@ -5385,16 +5410,16 @@ function verDetalle(tipo, id){
     html = `
       <div class="center"><div class="title">${biz}</div></div>
       <div class="divider"></div>
-      <div class="row"><span>Cliente:</span><span>${cl.nombre}</span></div>
-      ${cl.rut?`<div class="row"><span>RUT:</span><span>${cl.rut}</span></div>`:''}
-      <div class="row"><span>Concepto:</span><span>${c.concepto}</span></div>
+      <div class="row"><span>Cliente:</span><span>${esc(cl.nombre)}</span></div>
+      ${cl.rut?`<div class="row"><span>RUT:</span><span>${esc(cl.rut)}</span></div>`:''}
+      <div class="row"><span>Concepto:</span><span>${esc(c.concepto)}</span></div>
       <div class="row"><span>Fecha:</span><span>${c.fecha}</span></div>
       <div class="row"><span>Vencimiento:</span><span>${c.vencimiento}</span></div>
       <div class="divider"></div>
       <div class="row"><span>Total:</span><span>$${Math.round(c.monto).toLocaleString('es-CL')}</span></div>
       <div class="row"><span>Pagado:</span><span>$${Math.round(c.pagado).toLocaleString('es-CL')}</span></div>
       <div class="total"><span>PENDIENTE</span><span>$${Math.round(c.monto-c.pagado).toLocaleString('es-CL')}</span></div>
-      ${c.pagos&&c.pagos.length?`<div class="divider"></div><div style="font-weight:bold;margin-bottom:6px">Historial de pagos</div>${c.pagos.map(p=>`<div class="row"><span class="small">${p.fecha}${p.nota?' · '+p.nota:''}</span><span>$${Math.round(p.monto).toLocaleString('es-CL')}</span></div>`).join('')}`:''}`;
+      ${c.pagos&&c.pagos.length?`<div class="divider"></div><div style="font-weight:bold;margin-bottom:6px">Historial de pagos</div>${c.pagos.map(p=>`<div class="row"><span class="small">${p.fecha}${esc(p.nota?' · '+p.nota:'')}</span><span>$${Math.round(p.monto).toLocaleString('es-CL')}</span></div>`).join('')}`:''}`;
   }
 
   const win = window.open('','_blank','width=420,height=600');
@@ -5821,11 +5846,11 @@ DATOS DEL NEGOCIO (${new Date().toLocaleDateString('es-CL')}):
 - Ventas hoy: ${ventasHoy.length} ventas · $${fmt(totalHoy)}
 - Total ventas registradas: ${ventas.length}
 - Productos en inventario: ${productos.length}
-- Productos con stock crítico (<3 unidades): ${stockBajo.map(p=>p.nombre).join(', ')||'ninguno'}
+- Productos con stock crítico (<3 unidades): ${esc(stockBajo.map(p=>p.nombre).join(', ')||'ninguno')}
 - Clientes registrados: ${clientes.length}
 - Deuda total por cobrar: $${fmt(deudaTotal)}
-- Productos con menor margen: ${productosConMargen.slice(0,3).map(p=>`${p.nombre} (${p.margen}%)`).join(', ')||'sin datos'}
-- Productos con mayor margen: ${productosConMargen.slice(-3).reverse().map(p=>`${p.nombre} (${p.margen}%)`).join(', ')||'sin datos'}`;
+- Productos con menor margen: ${productosConMargen.slice(0,3).map(p=>`${esc(p.nombre)} (${p.margen}%)`).join(', ')||'sin datos'}
+- Productos con mayor margen: ${productosConMargen.slice(-3).reverse().map(p=>`${esc(p.nombre)} (${p.margen}%)`).join(', ')||'sin datos'}`;
 
     const res = await fetch(AGENTE_ENDPOINT, {
       method:'POST',
