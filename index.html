@@ -1550,6 +1550,7 @@ const ENDPOINTS = {
   usuarios:      N8N + '/merka-usuarios',
   configuracion: N8N + '/merka-configuracion',
   auth:          N8N + '/merka-auth',
+  registro:      N8N + '/merka-registro',
 };
 
 // La clave global fue eliminada del cliente (estaba expuesta en el repo).
@@ -4378,12 +4379,12 @@ async function authRegister(){
   const errEl = document.getElementById('reg-error');
   const btn = document.getElementById('reg-btn');
   if(!nombre || !email || !pass){ if(errEl) errEl.textContent='Completa todos los campos'; return; }
-  if(pass.length < 6){ if(errEl) errEl.textContent='La contraseña debe tener al menos 6 caracteres'; return; }
+  if(pass.length < 8){ if(errEl) errEl.textContent='La contraseña debe tener al menos 8 caracteres'; return; }
   if(!email.includes('@')){ if(errEl) errEl.textContent='Correo electrónico inválido'; return; }
   if(btn){ btn.textContent='Creando cuenta...'; btn.disabled=true; }
   if(errEl) errEl.textContent='';
   try {
-    const res = await fetch(ENDPOINTS.auth, {
+    const res = await fetch(ENDPOINTS.registro, {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ action:'register', nombre_negocio: nombre, email, password: pass })
