@@ -2231,7 +2231,7 @@ function updateSessionUI(){
   av.textContent = getInitials(session.nombre);
   av.className = 'session-avatar ' + getColor(session.id||0);
   document.getElementById('nav-usuarios').style.display = session.rol==='Administrador'?'flex':'none';
-  document.getElementById('nav-agente').style.display = isProIaPlan() ? 'flex' : 'none';
+  document.getElementById('nav-agente').style.display = 'none'; // Agente IA oculto en el lanzamiento
   updateLogoElements();
 }
 function updateLogoElements(){
