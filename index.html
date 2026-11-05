@@ -4885,7 +4885,7 @@ function showTrialExpired(){
 }
 
 // Suscripción manual: por ahora se coordina por correo o WhatsApp (sin pasarela de pago)
-const CONTACTO_SUSCRIPCION = { email: 'info@autix.pro', whatsapp: '56992025527' };   // whatsapp: solo dígitos con código de país, ej. '56912345678'
+const CONTACTO_SUSCRIPCION = { email: '', whatsapp: '56992025527' };   // whatsapp: solo dígitos con código de país, ej. '56912345678'
 function contactoSuscripcionUrl(){
   const org = sessionStorage.getItem('merka_org_id') || '';
   const msg = 'Hola, quiero activar mi suscripción de Merka POS. Mi ID de negocio es: ' + org;
