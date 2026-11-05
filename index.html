@@ -1551,6 +1551,7 @@ const ENDPOINTS = {
   configuracion: N8N + '/merka-configuracion',
   auth:          N8N + '/merka-auth',
   registro:      N8N + '/merka-registro',
+  pin:           N8N + '/merka-pin',
 };
 
 // La clave global fue eliminada del cliente (estaba expuesta en el repo).
@@ -1629,8 +1630,9 @@ const DB = {
     if(k === 'config'){
       try {
         const res = await API.call(ENDPOINTS.configuracion, {action:'getAll'});
-        if(res && res.datos){
-          const cfg = typeof res.datos === 'string' ? JSON.parse(res.datos) : res.datos;
+        const cfgRow = Array.isArray(res) ? res[0] : res;
+        if(cfgRow && cfgRow.datos){
+          const cfg = typeof cfgRow.datos === 'string' ? JSON.parse(cfgRow.datos) : cfgRow.datos;
           CACHE['config'] = cfg;
           return cfg;
         }
@@ -1767,11 +1769,18 @@ function renderLoginCashiers(targetId, onSelect){
     </button>
   `).join('');
 }
+// ═══ PIN (verificado en el servidor; el navegador ya no recibe los PIN) ═══
+function userHasPin(u){ return !!u && (u.tiene_pin === true || (sessionStorage.getItem('merka_is_demo')==='true' && !!u.pin)); }
+async function verifyUserPin(u, pin){
+  if(sessionStorage.getItem('merka_is_demo')==='true') return !!u.pin && pin === u.pin;   // demo: datos locales
+  const res = await API.call(ENDPOINTS.pin, { id: u.id, pin });
+  return !!(res && res.ok === true);
+}
 function selectLoginUser(id){
   loginSelectedUser = DB.get('usuarios').find(u=>Number(u.id)===Number(id));
   document.querySelectorAll('#loginCashierList .cashier-btn').forEach(b=>b.classList.remove('selected'));
   document.getElementById('cb-loginCashierList-'+id)?.classList.add('selected');
-  const hasPIN = loginSelectedUser && loginSelectedUser.pin;
+  const hasPIN = userHasPin(loginSelectedUser);
   document.getElementById('pinWrap').style.display = hasPIN ? 'block' : 'none';
   document.getElementById('pinInput').value = '';
   document.getElementById('pinError').textContent = '';
@@ -1779,16 +1788,22 @@ function selectLoginUser(id){
 }
 function checkPin(){
   const val = document.getElementById('pinInput').value;
-  if(loginSelectedUser?.pin && val.length >= loginSelectedUser.pin.length)
+  if(userHasPin(loginSelectedUser) && val.length >= 4)
     document.getElementById('loginBtn').disabled = false;
 }
 async function doLogin(){
   if(!loginSelectedUser) return;
   const pinInput = document.getElementById('pinInput').value;
-  if(loginSelectedUser.pin && pinInput !== loginSelectedUser.pin){
-    document.getElementById('pinError').textContent = 'PIN incorrecto';
-    document.getElementById('loginBtn').disabled = true;
-    return;
+  if(userHasPin(loginSelectedUser)){
+    const loginBtn = document.getElementById('loginBtn');
+    loginBtn.disabled = true;
+    const ok = await verifyUserPin(loginSelectedUser, pinInput);
+    if(!ok){
+      document.getElementById('pinError').textContent = 'PIN incorrecto o demasiados intentos';
+      document.getElementById('pinInput').value = '';
+      return;
+    }
+    loginBtn.disabled = false;
   }
   session = { id: loginSelectedUser.id, nombre: loginSelectedUser.nombre, rol: loginSelectedUser.rol };
   sessionStorage.setItem('merka_session', JSON.stringify(session));
@@ -1817,7 +1832,7 @@ function selectSwitchUser(id){
   switchSelectedUser = DB.get('usuarios').find(u=>Number(u.id)===Number(id));
   document.querySelectorAll('#switchCashierList .cashier-btn').forEach(b=>b.classList.remove('selected'));
   document.getElementById('cb-switchCashierList-'+id)?.classList.add('selected');
-  const hasPIN = switchSelectedUser && switchSelectedUser.pin;
+  const hasPIN = userHasPin(switchSelectedUser);
   document.getElementById('switchPinWrap').style.display = hasPIN ? 'block' : 'none';
   document.getElementById('switchPinInput').value = '';
   document.getElementById('switchPinError').textContent = '';
@@ -1825,16 +1840,20 @@ function selectSwitchUser(id){
 }
 function checkSwitchPin(){
   const val = document.getElementById('switchPinInput').value;
-  if(switchSelectedUser?.pin && val.length >= switchSelectedUser.pin.length)
+  if(userHasPin(switchSelectedUser) && val.length >= 4)
     document.getElementById('switchBtn').disabled = false;
 }
-function doSwitch(){
+async function doSwitch(){
   if(!switchSelectedUser) return;
   const pinInput = document.getElementById('switchPinInput').value;
-  if(switchSelectedUser.pin && pinInput !== switchSelectedUser.pin){
-    document.getElementById('switchPinError').textContent = 'PIN incorrecto';
+  if(userHasPin(switchSelectedUser)){
     document.getElementById('switchBtn').disabled = true;
-    return;
+    const ok = await verifyUserPin(switchSelectedUser, pinInput);
+    if(!ok){
+      document.getElementById('switchPinError').textContent = 'PIN incorrecto o demasiados intentos';
+      document.getElementById('switchPinInput').value = '';
+      return;
+    }
   }
   session = { id: switchSelectedUser.id, nombre: switchSelectedUser.nombre, rol: switchSelectedUser.rol };
   sessionStorage.setItem('merka_session', JSON.stringify(session));
@@ -3327,7 +3346,7 @@ function renderUsuarios(){
             <div class="user-card-name">${esc(u.nombre)}</div>
             <div class="user-card-meta">
               <span class="badge ${u.rol==='Administrador'?'badge-acc':u.rol==='Supervisor'?'badge-blue':'badge-muted'}" style="margin-right:6px">${esc(u.rol)}</span>
-              ${u.pin?'<span class="badge badge-blue" style="margin-right:4px">PIN activo</span>':'<span class="badge badge-muted" style="margin-right:4px">Sin PIN</span>'}
+              ${userHasPin(u)?'<span class="badge badge-blue" style="margin-right:4px">PIN activo</span>':'<span class="badge badge-muted" style="margin-right:4px">Sin PIN</span>'}
               ${u.rol!=='Administrador'?`<span class="badge badge-muted">${Object.values(u.permisos||{}).filter(Boolean).length} permisos</span>`:'<span class="badge badge-acc">Acceso total</span>'}
             </div>
           </div>
@@ -3368,7 +3387,8 @@ function openUsuarioModal(u=null){
           <option value="false" ${u&&!u.activo?'selected':''}>Inactivo</option>
         </select>
       </div>
-      <div class="form-group span2"><label>PIN (opcional, máx 6 dígitos)</label><input id="u-pin" type="password" value="${u?u.pin:''}" placeholder="Dejar vacío para no usar PIN" maxlength="6"></div>
+      <div class="form-group span2"><label>PIN (opcional, 4 a 6 dígitos)</label><input id="u-pin" type="password" inputmode="numeric" value="" placeholder="${u&&userHasPin(u)?'Vacío = mantener el PIN actual':'Dejar vacío para no usar PIN'}" maxlength="6" autocomplete="new-password">
+        ${u&&userHasPin(u)?'<label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:12px;color:var(--muted)"><input type="checkbox" id="u-clearpin"> Quitar el PIN actual</label>':''}</div>
       <div class="form-group span2">
         <label>Permisos</label>
         <div class="perm-grid">
@@ -3390,13 +3410,19 @@ function saveUsuario(id,isEdit){
   const permKeys = ['verCostos','editarInventario','eliminarVentas','verReportes','verGastos','gestionarUsuarios','abrirCaja'];
   const permisos = {};
   permKeys.forEach(k=>{ const el=document.getElementById('perm-'+k); permisos[k]=el?el.checked:false; });
-  const u = {id,nombre:document.getElementById('u-nombre').value.trim(),rol:document.getElementById('u-rol').value,activo:document.getElementById('u-activo').value==='true',pin:document.getElementById('u-pin').value,permisos};
+  const pinNuevo = (document.getElementById('u-pin').value||'').replace(/\D/g,'');
+  const quitarPin = !!document.getElementById('u-clearpin')?.checked;
+  if(pinNuevo && pinNuevo.length < 4) return alert('El PIN debe tener entre 4 y 6 dígitos');
+  const prev = DB.get('usuarios').find(x=>Number(x.id)===Number(id));
+  const u = {id,nombre:document.getElementById('u-nombre').value.trim(),rol:document.getElementById('u-rol').value,activo:document.getElementById('u-activo').value==='true',permisos,
+    tiene_pin: quitarPin ? false : (pinNuevo ? true : !!(prev && userHasPin(prev)))};
   if(!u.nombre) return alert('Nombre obligatorio');
   let usuarios = DB.get('usuarios');
   if(isEdit) usuarios = usuarios.map(x=>Number(x.id)===Number(id)?u:x);
   else usuarios.push(u);
   DB.set('usuarios',usuarios);
-  DB.sync('usuarios', u);
+  // El PIN viaja solo al guardar; el servidor lo guarda con hash y nunca lo devuelve
+  DB.sync('usuarios', {...u, pin: pinNuevo, clearPin: quitarPin});
   logAudit(isEdit?'Usuario editado':'Usuario creado','Usuarios',u.nombre);
   closeModal(); renderUsuarios();
   // Update session if editing self
@@ -4559,7 +4585,7 @@ async function createFirstAdmin(){
     activo: true,
     permisos: {verCostos:true,editarInventario:true,eliminarVentas:true,verReportes:true,verGastos:true,gestionarUsuarios:true,abrirCaja:true}
   };
-  const usuarios = [admin];
+  const usuarios = [{...admin, pin:'', tiene_pin:true}];
   DB.set('usuarios', usuarios);
   await DB.sync('usuarios', admin);
 
