@@ -1530,6 +1530,11 @@ input[type=checkbox],input[type=radio]{min-height:0;width:auto;accent-color:var(
 .sidebar > button[onclick^="logoutSession"]{min-height:44px;font-size:12.5px!important;font-weight:600;}
 
 a[onclick^="showRecover"]{display:inline-block;padding:10px 8px;}
+
+/* UI v2 - etiquetas: sans en lugar de mono pequeño (los importes siguen en mono) */
+.login-card label,.login-pin-wrap label,.t-cart label,.form-group label,.topbar-date,#t-sale-count,.cashier-info .c-role,.session-role,.login-logo-text .tagline{font-family:var(--sans)!important;text-transform:none!important;letter-spacing:0!important;font-size:12.5px!important;font-weight:600;}
+#t-sale-count{font-weight:500;}
+.login-error{font-family:var(--sans);}
 </style>
 </head>
 <body>
@@ -4884,7 +4889,7 @@ function goToPayment(){
 
 // ═══ THEME ═══
 function initTheme(){
-  const saved = localStorage.getItem('merka_theme') || 'dark';
+  const saved = localStorage.getItem('merka_theme') || 'light';
   applyTheme(saved);
 }
 function applyTheme(theme){
@@ -4895,7 +4900,7 @@ function applyTheme(theme){
   localStorage.setItem('merka_theme', theme);
 }
 function toggleTheme(){
-  const current = localStorage.getItem('merka_theme') || 'dark';
+  const current = localStorage.getItem('merka_theme') || 'light';
   applyTheme(current === 'dark' ? 'light' : 'dark');
 }
 
