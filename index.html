@@ -4723,6 +4723,11 @@ function enterDemoMode(){
     {id:1,items:[{productoId:1,nombre:'Leche Entera 1L',qty:2,precio:1200,subtotal:2400},{productoId:4,nombre:'Coca-Cola 1.5L',qty:1,precio:1490,subtotal:1490}],total:3890,metodo:'Efectivo',cliente:'Sin cliente',cajero:'María Cajero',fecha:hoy,hora:'09:15'},
     {id:2,items:[{productoId:6,nombre:'Queso Mantecoso',qty:1,precio:7990,subtotal:3995,peso:0.5},{productoId:2,nombre:'Pan de Molde 500g',qty:2,precio:1650,subtotal:3300}],total:7295,metodo:'Transferencia',cliente:'Juan Pérez',cajero:'Demo Admin',fecha:hoy,hora:'10:42'},
     {id:3,items:[{productoId:7,nombre:'Nescafé Tradición 170g',qty:1,precio:4290,subtotal:4290},{productoId:10,nombre:'Agua Cachantun 600ml',qty:2,precio:690,subtotal:1380}],total:5670,metodo:'Efectivo',cliente:'Sin cliente',cajero:'María Cajero',fecha:hoy,hora:'11:30'},
+    {id:4,items:[{productoId:5,nombre:'Aceite Vegetal 900ml',qty:2,precio:2490,subtotal:4980},{productoId:3,nombre:'Arroz Grado 1 1kg',qty:3,precio:1490,subtotal:4470}],total:9450,metodo:'Tarjeta',cliente:'Sin cliente',cajero:'María Cajero',fecha:hoy,hora:'12:10'},
+    {id:5,items:[{productoId:6,nombre:'Queso Mantecoso',qty:1,precio:7990,subtotal:7990,peso:1},{productoId:1,nombre:'Leche Entera 1L',qty:6,precio:1200,subtotal:7200}],total:15190,metodo:'Efectivo',cliente:'Juan Pérez',cajero:'Demo Admin',fecha:hoy,hora:'12:48'},
+    {id:6,items:[{productoId:9,nombre:'Jugo Naranja Guallarauco',qty:4,precio:1890,subtotal:7560},{productoId:2,nombre:'Pan de Molde 500g',qty:3,precio:1650,subtotal:4950}],total:12510,metodo:'Tarjeta',cliente:'Sin cliente',cajero:'María Cajero',fecha:hoy,hora:'13:25'},
+    {id:7,items:[{productoId:4,nombre:'Coca-Cola 1.5L',qty:5,precio:1490,subtotal:7450},{productoId:10,nombre:'Agua Cachantun 600ml',qty:6,precio:690,subtotal:4140}],total:11590,metodo:'Efectivo',cliente:'Sin cliente',cajero:'María Cajero',fecha:hoy,hora:'14:02'},
+    {id:8,items:[{productoId:6,nombre:'Queso Mantecoso',qty:1,precio:7990,subtotal:3995,peso:0.5},{productoId:7,nombre:'Nescafé Tradición 170g',qty:2,precio:4290,subtotal:8580}],total:12575,metodo:'Transferencia',cliente:'Rosa Martínez',cajero:'Demo Admin',fecha:hoy,hora:'14:40'},
   ];
   CACHE['clientes'] = [
     {id:1,nombre:'Juan Pérez',telefono:'+56912345678',credito:50000,deuda:0},
@@ -4732,7 +4737,7 @@ function enterDemoMode(){
     {id:1,clienteId:2,monto:15000,pagado:0,vencimiento:new Date(Date.now()+7*86400000).toISOString().slice(0,10),nota:'Compra semanal'},
   ];
   CACHE['gastos'] = [
-    {id:1,concepto:'Electricidad',monto:45000,categoria:'Servicios',fecha:hoy,cajero:'Demo Admin'},
+    {id:1,concepto:'Electricidad',monto:12000,categoria:'Servicios',fecha:hoy,cajero:'Demo Admin'},
   ];
   CACHE['proveedores'] = [
     {id:1,nombre:'Distribuidora Sur Ltda.',rut:'76.123.456-7',telefono:'+56222333444',categoria:'Lácteos',credito:200000,deuda:0},
