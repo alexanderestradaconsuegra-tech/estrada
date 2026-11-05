@@ -52,8 +52,8 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       fetch(event.request).catch(() => {
         return new Response(
-          JSON.stringify({ok:false, error:'Sin conexión', data:[]}),
-          {headers:{'Content-Type':'application/json'}}
+          JSON.stringify({ok:false, error:'Sin conexión'}),
+          {status:503, headers:{'Content-Type':'application/json'}}
         );
       })
     );

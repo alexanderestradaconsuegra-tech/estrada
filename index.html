@@ -1573,7 +1573,8 @@ const API = {
     const isAuth = endpoint.includes('merka-auth') || endpoint.includes('merka-admin');
     const isRead = body && body.action === 'getAll';
     const key = getApiKey();
-    const payload = isAuth ? body : { ...body, org_id: getOrgId(), ...(key ? {_key: key} : {}) };
+    const ut = sessionStorage.getItem('merka_ut');
+    const payload = isAuth ? body : { ...body, org_id: getOrgId(), ...(key ? {_key: key} : {}), ...(ut ? {_ut: ut} : {}) };
     const attempts = isRead ? API_RETRIES + 1 : 1;
     let lastErr;
     for(let i = 0; i < attempts; i++){
@@ -1586,7 +1587,17 @@ const API = {
           body: JSON.stringify(payload),
           signal: ctrl.signal
         });
-        if(res.status === 401 || res.status === 403) throw Object.assign(new Error('HTTP '+res.status), {fatal:true});
+        if(res.status === 401 || res.status === 403){
+          if(res.status === 401 && sessionStorage.getItem('merka_ut')){
+            // Sesión de usuario vencida o revocada: volver a pedir PIN
+            sessionStorage.removeItem('merka_ut'); sessionStorage.removeItem('merka_session');
+            if(typeof showToast === 'function') showToast('Sesión expirada. Ingresa de nuevo.', 'error');
+            setTimeout(() => location.reload(), 1200);
+          } else if(res.status === 403 && typeof showToast === 'function'){
+            showToast('No tienes permiso para esta acción.', 'error');
+          }
+          throw Object.assign(new Error('HTTP '+res.status), {fatal:true, silent:true});
+        }
         if(!res.ok) throw new Error('HTTP '+res.status);
         const json = await res.json();
         API_LAST_ERROR = null;
@@ -1605,7 +1616,7 @@ const API = {
     API_LAST_ERROR = lastErr;
     console.warn('API error:', endpoint, lastErr && lastErr.message);
     // Las escrituras fallidas se notifican: antes fallaban en silencio
-    if(!isRead && !isAuth && typeof showToast === 'function'){
+    if(!isRead && !isAuth && !(lastErr && lastErr.silent) && typeof showToast === 'function'){
       showToast(lastErr && lastErr.name === 'AbortError' ? 'Tiempo de espera agotado. Revisa la conexión.' : 'No se pudo guardar. Revisa la conexión.', 'error');
     }
     return null;
@@ -1773,9 +1784,13 @@ function renderLoginCashiers(targetId, onSelect){
 function userHasPin(u){ return !!u && (u.tiene_pin === true || (sessionStorage.getItem('merka_is_demo')==='true' && !!u.pin)); }
 async function verifyUserPin(u, pin){
   if(sessionStorage.getItem('merka_is_demo')==='true') return !!u.pin && pin === u.pin;   // demo: datos locales
+  sessionStorage.removeItem('merka_ut');
   const res = await API.call(ENDPOINTS.pin, { id: u.id, pin });
-  return !!(res && res.ok === true);
+  if(res && res.ok === true && res.token){ sessionStorage.setItem('merka_ut', res.token); return true; }
+  return false;
 }
+// Inicia la sesión del usuario en el servidor (también para usuarios sin PIN)
+const needsServerSession = u => sessionStorage.getItem('merka_is_demo')!=='true';
 function selectLoginUser(id){
   loginSelectedUser = DB.get('usuarios').find(u=>Number(u.id)===Number(id));
   document.querySelectorAll('#loginCashierList .cashier-btn').forEach(b=>b.classList.remove('selected'));
@@ -1794,12 +1809,12 @@ function checkPin(){
 async function doLogin(){
   if(!loginSelectedUser) return;
   const pinInput = document.getElementById('pinInput').value;
-  if(userHasPin(loginSelectedUser)){
+  if(userHasPin(loginSelectedUser) || needsServerSession(loginSelectedUser)){
     const loginBtn = document.getElementById('loginBtn');
     loginBtn.disabled = true;
     const ok = await verifyUserPin(loginSelectedUser, pinInput);
     if(!ok){
-      document.getElementById('pinError').textContent = 'PIN incorrecto o demasiados intentos';
+      document.getElementById('pinError').textContent = userHasPin(loginSelectedUser) ? 'PIN incorrecto o demasiados intentos' : 'No se pudo iniciar sesión. Intenta de nuevo.';
       document.getElementById('pinInput').value = '';
       return;
     }
@@ -1846,7 +1861,7 @@ function checkSwitchPin(){
 async function doSwitch(){
   if(!switchSelectedUser) return;
   const pinInput = document.getElementById('switchPinInput').value;
-  if(userHasPin(switchSelectedUser)){
+  if(userHasPin(switchSelectedUser) || needsServerSession(switchSelectedUser)){
     document.getElementById('switchBtn').disabled = true;
     const ok = await verifyUserPin(switchSelectedUser, pinInput);
     if(!ok){
@@ -4509,6 +4524,7 @@ async function authLogin(){
       }
       // Clear previous org cache if different org
       const prevOrg = sessionStorage.getItem('merka_org_id');
+      sessionStorage.removeItem('merka_ut');
       if(prevOrg !== orgId){
         ['productos','clientes','ventas','cobrar','cierres','gastos','proveedores','pagar','usuarios','config','aperturas','recepciones','auditlog'].forEach(k=>{
           delete CACHE[k];
@@ -4588,6 +4604,7 @@ async function createFirstAdmin(){
   const usuarios = [{...admin, pin:'', tiene_pin:true}];
   DB.set('usuarios', usuarios);
   await DB.sync('usuarios', admin);
+  if(!(await verifyUserPin(admin, pin))) return showToast('No se pudo iniciar sesión del administrador','error');
 
   // Save business name in config
   const cfg = {businessName: negocio||nombre, rut:'', direccion:'', telefono:'', email:'', logo:'', whatsapp:''};
@@ -5554,6 +5571,8 @@ function logoutSession(){
   if(!confirm('¿Cerrar sesión?')) return;
   session = null;
   sessionStorage.removeItem('merka_session');
+  sessionStorage.removeItem('merka_ut');
+  sessionStorage.removeItem('merka_api_key');
   // Stop polling
   if(_syncInterval) clearInterval(_syncInterval);
   sessionStorage.removeItem('merka_org_id');
@@ -5982,12 +6001,7 @@ async function init(){
     DB.load('config'),
     DB.load('usuarios'),
   ]).catch(()=>{});
-  // Load data modules
-  await Promise.all([
-    DB.load('productos'),DB.load('clientes'),DB.load('ventas'),
-    DB.load('cobrar'),DB.load('cierres'),DB.load('gastos'),
-    DB.load('proveedores'),DB.load('pagar')
-  ]).catch(()=>{});
+  // Los módulos de datos se cargan después del login (syncAll), ya con la sesión del usuario
   initBarcodeListener();
   initWeightKeyboard();
   updateLogoElements();
