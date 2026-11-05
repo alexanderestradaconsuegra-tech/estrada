@@ -5,7 +5,7 @@ FROM nginx:1.27-alpine
 # el commit desplegado no era trazable.
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY security-headers.conf /etc/nginx/snippets/security-headers.conf
-COPY index.html manifest.json sw.js icon-192.png icon-512.png /usr/share/nginx/html/
+COPY index.html manifest.json sw.js icon-192.png icon-512.png icon-maskable-512.png favicon.svg favicon-32.png apple-touch-icon.png /usr/share/nginx/html/
 
 # Versiona el service worker con el commit para invalidar cachés viejas
 ARG BUILD_VERSION=dev
