@@ -1231,7 +1231,7 @@ select option{background:var(--sur2);color:var(--text);}
     </div>
     <!-- TABS -->
     <div id="login-layer1">
-      <div style="display:flex;gap:0;background:var(--sur2);border-radius:10px;padding:3px;margin-bottom:22px;">
+      <div id="login-tabs" style="display:flex;gap:0;background:var(--sur2);border-radius:10px;padding:3px;margin-bottom:22px;">
         <button id="tab-login" onclick="switchLoginTab('login')" style="flex:1;padding:9px;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:var(--sans);cursor:pointer;background:var(--acc);color:#000;transition:all 0.2s;">Iniciar sesión</button>
         <button id="tab-register" onclick="switchLoginTab('register')" style="flex:1;padding:9px;border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;background:transparent;color:var(--muted);transition:all 0.2s;">Registrarse</button>
       </div>
@@ -1254,6 +1254,7 @@ select option{background:var(--sur2);color:var(--text);}
         </div>
         <div class="login-error" id="auth-error" style="margin-bottom:10px"></div>
         <button class="btn btn-primary btn-lg" style="width:100%" onclick="authLogin()" id="auth-btn">Acceder →</button>
+        <div style="text-align:center;margin-top:12px;"><a href="#" onclick="showRecover();return false;" style="font-size:12px;color:var(--muted);text-decoration:underline;">¿Olvidaste tu contraseña o tu ID de negocio?</a></div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:14px;">
           <div style="flex:1;height:1px;background:var(--bdr);"></div>
           <span style="font-size:11px;color:var(--muted);font-family:var(--mono);">o</span>
@@ -1281,7 +1282,7 @@ select option{background:var(--sur2);color:var(--text);}
           </div>
           <div>
             <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono)">Contraseña</label>
-            <input id="reg-pass" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"
+            <input id="reg-pass" type="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password"
               style="width:100%;margin-top:6px;padding:11px 14px;border:1.5px solid var(--bdr);border-radius:var(--radius-sm);background:var(--sur2);color:var(--text);font-size:14px;outline:none"
               onkeydown="if(event.key==='Enter')authRegister()">
           </div>
@@ -1289,6 +1290,32 @@ select option{background:var(--sur2);color:var(--text);}
         <div class="login-error" id="reg-error" style="margin-bottom:10px"></div>
         <button class="btn btn-primary btn-lg" style="width:100%" onclick="authRegister()" id="reg-btn">Crear cuenta gratis →</button>
         <p style="text-align:center;font-size:11px;color:var(--muted);margin-top:12px;line-height:1.6;">30 días gratis · Sin tarjeta de crédito<br>Cancela cuando quieras</p>
+      </div>
+
+      <!-- RECUPERAR CONTRASEÑA -->
+      <div id="recover-form" style="display:none">
+        <div class="login-h" style="margin-bottom:6px">Recupera tu acceso</div>
+        <div class="login-sub" style="margin-bottom:16px">Escribe el correo con el que te registraste. Te enviaremos tu ID de negocio y un enlace para crear una contraseña nueva.</div>
+        <div style="margin-bottom:16px;">
+          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono)">Correo electrónico</label>
+          <input id="rec-email" type="email" placeholder="correo@negocio.com" autocomplete="email" style="width:100%;margin-top:6px;padding:11px 14px;border:1.5px solid var(--bdr);border-radius:var(--radius-sm);background:var(--sur2);color:var(--text);font-size:14px;outline:none" onkeydown="if(event.key==='Enter')sendRecover()">
+        </div>
+        <div class="login-error" id="rec-msg" style="margin-bottom:10px"></div>
+        <button class="btn btn-primary btn-lg" style="width:100%" onclick="sendRecover()" id="rec-btn">Enviar instrucciones</button>
+        <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:10px;color:var(--muted)" onclick="backToLogin()">← Volver</button>
+      </div>
+
+      <!-- NUEVA CONTRASEÑA (desde el enlace del correo) -->
+      <div id="reset-form" style="display:none">
+        <div class="login-h" style="margin-bottom:6px">Crea tu nueva contraseña</div>
+        <div class="login-sub" style="margin-bottom:16px">Mínimo 8 caracteres. Al guardarla se cerrarán las sesiones abiertas.</div>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+          <div><label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono)">Nueva contraseña</label><input id="rst-pass" type="password" autocomplete="new-password" style="width:100%;margin-top:6px;padding:11px 14px;border:1.5px solid var(--bdr);border-radius:var(--radius-sm);background:var(--sur2);color:var(--text);font-size:14px;outline:none"></div>
+          <div><label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono)">Repite la contraseña</label><input id="rst-pass2" type="password" autocomplete="new-password" style="width:100%;margin-top:6px;padding:11px 14px;border:1.5px solid var(--bdr);border-radius:var(--radius-sm);background:var(--sur2);color:var(--text);font-size:14px;outline:none" onkeydown="if(event.key==='Enter')doReset()"></div>
+        </div>
+        <div class="login-error" id="rst-msg" style="margin-bottom:10px"></div>
+        <button class="btn btn-primary btn-lg" style="width:100%" onclick="doReset()" id="rst-btn">Guardar contraseña</button>
+        <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:10px;color:var(--muted)" onclick="backToLogin()">← Volver</button>
       </div>
     </div>
     <!-- CAPA 2: Selección de usuario -->
@@ -1552,6 +1579,8 @@ const ENDPOINTS = {
   auth:          N8N + '/merka-auth',
   registro:      N8N + '/merka-registro',
   pin:           N8N + '/merka-pin',
+  recuperar:     N8N + '/merka-recuperar',
+  reset:         N8N + '/merka-reset',
 };
 
 // La clave global fue eliminada del cliente (estaba expuesta en el repo).
@@ -1570,7 +1599,7 @@ let API_LAST_ERROR = null;
 
 const API = {
   async call(endpoint, body) {
-    const isAuth = endpoint.includes('merka-auth') || endpoint.includes('merka-admin');
+    const isAuth = /merka-(auth|admin|registro|recuperar|reset)/.test(endpoint);
     const isRead = body && body.action === 'getAll';
     const key = getApiKey();
     const ut = sessionStorage.getItem('merka_ut');
@@ -4400,6 +4429,60 @@ function enterDemoMode(){
   document.body.appendChild(banner);
 }
 
+// ═══ RECUPERAR CONTRASEÑA ═══
+let _resetCtx = null;
+function _authPane(id){
+  ['login-form','register-form','recover-form','reset-form'].forEach(p=>{ const el=document.getElementById(p); if(el) el.style.display = (p===id?'block':'none'); });
+  const tabs=document.getElementById('login-tabs'); if(tabs) tabs.style.display = (id==='recover-form'||id==='reset-form') ? 'none' : 'flex';
+}
+function showRecover(){
+  _authPane('recover-form');
+  const m=document.getElementById('rec-msg'); if(m) m.textContent='';
+  document.getElementById('rec-email')?.focus();
+}
+function backToLogin(){ _authPane('login-form'); switchLoginTab('login'); }
+async function sendRecover(){
+  const email = document.getElementById('rec-email')?.value.trim().toLowerCase();
+  const msg = document.getElementById('rec-msg'); const btn = document.getElementById('rec-btn');
+  if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ msg.style.color='var(--red)'; msg.textContent='Ingresa un correo válido'; return; }
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  const res = await API.call(ENDPOINTS.recuperar, { email });
+  btn.disabled = false; btn.textContent = 'Enviar instrucciones';
+  if(res === null){ msg.style.color='var(--red)'; msg.textContent='No se pudo enviar. Intenta de nuevo en unos minutos.'; return; }
+  msg.style.color = 'var(--acc)';
+  msg.textContent = 'Si el correo está registrado, te enviamos tu ID de negocio y un enlace válido por 30 minutos. Revisa también la carpeta de spam.';
+}
+function showResetFromUrl(){
+  const q = new URLSearchParams(location.search);
+  const token = q.get('reset'), org = q.get('org');
+  if(!token || !org) return;
+  _resetCtx = { token, org };
+  history.replaceState(null, '', location.pathname);   // saca el token de la barra de direcciones
+  _authPane('reset-form');
+}
+async function doReset(){
+  const p1 = document.getElementById('rst-pass')?.value || '';
+  const p2 = document.getElementById('rst-pass2')?.value || '';
+  const msg = document.getElementById('rst-msg'); const btn = document.getElementById('rst-btn');
+  msg.style.color = 'var(--red)';
+  if(!_resetCtx){ msg.textContent = 'Enlace inválido. Solicita uno nuevo.'; return; }
+  if(p1.length < 8){ msg.textContent = 'La contraseña debe tener al menos 8 caracteres'; return; }
+  if(p1 !== p2){ msg.textContent = 'Las contraseñas no coinciden'; return; }
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  const res = await API.call(ENDPOINTS.reset, { org_id: _resetCtx.org, token: _resetCtx.token, password: p1 });
+  btn.disabled = false; btn.textContent = 'Guardar contraseña';
+  if(res && res.ok === true){
+    const org = _resetCtx.org; _resetCtx = null;
+    backToLogin();
+    document.getElementById('auth-orgid').value = org;
+    const e = document.getElementById('auth-error');
+    if(e){ e.style.color = 'var(--acc)'; e.textContent = '✓ Contraseña actualizada. Ingresa con la nueva.'; }
+    document.getElementById('auth-pass')?.focus();
+  } else {
+    msg.textContent = (res && res.error) || 'Enlace inválido o vencido. Solicita uno nuevo.';
+  }
+}
+
 // ═══ LOGIN TABS ═══
 function switchLoginTab(tab){
   const isLogin = tab === 'login';
@@ -6020,6 +6103,7 @@ async function init(){
   document.getElementById('login-layer2').style.display = 'none';
   document.getElementById('topbarDate').textContent = todayLabel();
   updateLogoElements();
+  showResetFromUrl();
   // If org_id already stored, pre-fill
   const storedOrg = sessionStorage.getItem('merka_org_id');
   if(storedOrg && document.getElementById('auth-orgid')){
