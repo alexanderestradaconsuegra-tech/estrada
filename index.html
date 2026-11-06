@@ -4117,7 +4117,7 @@ function printBoleta(ventaId){
   const win = window.open('','_blank','width=400,height=600');
   win.document.write(`<!DOCTYPE html><html><head>
     <meta charset="UTF-8">
-    <title>Boleta #${String(ventaId).slice(-6)}</title>
+    <title>Comprobante #${String(ventaId).slice(-6)}</title>
     <style>
       *{margin:0;padding:0;box-sizing:border-box;}
       body{font-family:'Courier New',Courier,monospace;font-size:14px;color:#000 !important;background:#fff !important;padding:16px;max-width:320px;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
@@ -4138,7 +4138,7 @@ function printBoleta(ventaId){
       ${cfg.telefono?`<div class="small">Tel: ${esc(cfg.telefono)}</div>`:''}
     </div>
     <div class="divider"></div>
-    <div class="row"><span>Boleta #</span><span>${String(ventaId).slice(-6)}</span></div>
+    <div class="row"><span>Comprobante #</span><span>${String(ventaId).slice(-6)}</span></div>
     <div class="row"><span>Fecha:</span><span>${venta.fecha}</span></div>
     <div class="row"><span>Cajero:</span><span>${esc(venta.cajero||'—')}</span></div>
     ${venta.cliente?`<div class="row"><span>Cliente:</span><span>${esc(venta.cliente)}</span></div>`:''}
@@ -4153,6 +4153,7 @@ function printBoleta(ventaId){
     <div class="total-row"><span>TOTAL</span><span>$${Math.round(venta.total).toLocaleString('es-CL')}</span></div>
     <div class="divider"></div>
     <div class="center small" style="margin-top:8px;">¡Gracias por su compra!</div>
+    <div class="center small" style="margin-top:6px;font-weight:bold;">Comprobante interno, no válido como boleta o factura</div>
     <script>window.onload=()=>{window.print();}<\/script>
   </body></html>`);
   win.document.close();
