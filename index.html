@@ -3419,10 +3419,14 @@ function renderVentas(filtroFecha){
     }).join('')||'<div class="empty"><div class="empty-icon"><i class=ic-receipt></i></div><div class="empty-title">Sin ventas</div></div>'}
   `;
 }
-function deleteVenta(id){
+async function deleteVenta(id){
   if(!checkPerm('eliminarVentas','No tienes permiso para eliminar ventas.')) return;
-  if(dteTieneBoleta(id)){ showToast('Esta venta tiene boleta electrónica emitida: no se puede eliminar.','error'); return; }
-  if(!confirm('¿Eliminar venta?')) return;
+  const dd = dteDoc(id);
+  if(dd && dd.estado === 'emitiendo'){ showToast('La boleta se está emitiendo. Espera un momento e inténtalo de nuevo.','error'); return; }
+  if(dd && dd.estado === 'emitida' && !(dd.nc && dd.nc.estado === 'emitida')){
+    if(!confirm(`Esta venta tiene la boleta electrónica N° ${dd.folio}.\nPara eliminarla se emitirá una nota de crédito que la anula ante el SII. Esto no se puede deshacer.\n\n¿Continuar?`)) return;
+    if(!(await dteAnular(id))) return;
+  } else if(!confirm('¿Eliminar venta?')) return;
   const dv=DB.get('ventas').find(v=>Number(v.id)===Number(id));
   DB.set('ventas',DB.get('ventas').filter(v=>v.id!==id));
   logAudit('Venta eliminada','Ventas',`ID ${id} · ${fmt(dv?.total||0)}`);
@@ -6474,7 +6478,8 @@ async function dteCargarEstado(){
   const l = await API.call(ENDPOINTS.dte, {action:'listar'}, {quiet:true});
   if(Array.isArray(l)){
     const docs = {};
-    l.forEach(d => { if(Number(d.tipo) === 39) docs[String(d.venta_id)] = { venta_id:String(d.venta_id), tipo:39, estado:d.estado, folio:d.folio, error:d.error }; });
+    l.forEach(d => { if(Number(d.tipo) === 39) docs[String(d.venta_id)] = Object.assign(docs[String(d.venta_id)] || {}, { venta_id:String(d.venta_id), tipo:39, estado:d.estado, folio:d.folio, error:d.error }); });
+    l.forEach(d => { if(Number(d.tipo) === 61){ const k = String(d.venta_id); docs[k] = docs[k] || { venta_id:k, tipo:39 }; docs[k].nc = { estado:d.estado, folio:d.folio }; } });
     Object.keys(DTE.docs).forEach(k => { if(DTE.docs[k].estado === 'emitiendo') docs[k] = DTE.docs[k]; });
     DTE.docs = docs;
   }
@@ -6490,6 +6495,7 @@ function dteStatusHTML(id){
 function dteBadgeHTML(v){
   const id = String(v.id), d = dteDoc(id);
   const open = (cls, inner, extra='') => `<span class="dte-badge ${cls}" data-v="${esc(id)}" ${extra}>${inner}</span>`;
+  if(d && d.estado === 'emitida' && d.nc && d.nc.estado === 'emitida') return open('dte-wait', `Anulada · NC ${esc(d.nc.folio==null?'':d.nc.folio)}`, `title="Boleta N° ${esc(d.folio==null?'':d.folio)} anulada con nota de crédito"`);
   if(d && d.estado === 'emitida')   return open('dte-ok', `<i class=ic-check></i> N° ${esc(d.folio==null?'':d.folio)}`, 'title="Boleta electrónica emitida"');
   if(d && d.estado === 'emitiendo') return open('dte-wait', 'Emitiendo…');
   if(d && d.estado === 'error')     return open('dte-err', `<button onclick="dteReintentar('${esc(id)}')" title="${esc(d.error||'')}">Reintentar boleta</button>`);
@@ -6540,6 +6546,23 @@ async function dteReintentar(id){
   dteAplicarResultado(id, r);
   const d = dteDoc(id);
   showToast(d && d.estado === 'emitida' ? 'Boleta electrónica emitida' : ((d && d.error) || 'No se emitió la boleta'), d && d.estado === 'emitida' ? 'success' : 'error');
+}
+// Anula la boleta emitida de una venta con una nota de crédito. Devuelve true si la venta ya no tiene boleta vigente.
+async function dteAnular(id){
+  id = String(id);
+  const d = dteDoc(id);
+  if(!d || d.estado !== 'emitida') return true;                          // sin boleta: nada que anular ante el SII
+  if(d.nc && d.nc.estado === 'emitida') return true;                     // ya anulada
+  showToast('Emitiendo nota de crédito…', 'info');
+  const r = await API.call(ENDPOINTS.dte, {action:'anular', venta_id:Number(id)}, {quiet:true, timeout:45000});
+  if(r && (r.resultado === 'emitida' || r.resultado === 'ya_anulada' || r.resultado === 'sin_boleta')){
+    if(r.resultado !== 'sin_boleta') d.nc = { estado:'emitida', folio:r.folio };
+    dtePintarEstado(id);
+    showToast(r.resultado === 'sin_boleta' ? 'La venta no tenía boleta emitida' : 'Nota de crédito N° ' + r.folio + ' emitida', 'success');
+    return true;
+  }
+  showToast((r && r.error) || 'No se pudo emitir la nota de crédito. La venta no se eliminó.', 'error');
+  return false;
 }
 // Imprime la boleta del SII (PDF de 80 mm). Devuelve true si la venta lleva boleta electrónica.
 function dteImprimirSiAplica(id){
