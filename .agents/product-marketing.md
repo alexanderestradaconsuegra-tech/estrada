@@ -106,6 +106,8 @@ Pendiente: reseñas de Google, primeros clientes con permiso, cifras reales.
 
 - 2026-11-12. Sistema de diseño extendido a toda la landing (papel #F1F1EE, tinta #0E0E0E, verde #22D3AB, esquinas rectas, líneas de tinta, sombra dura, etiquetas mono numeradas). Se eliminó la sección Demo (el video queda solo en el hero). La sección "servicios" pasó a ser una tabla "Lo que resuelve" (antes tachado / ahora con Merka POS) con 8 problemas y su solución real. Titulares más de venta: "Todo lo que hoy haces a mano, en un solo sistema", "Si vendes todos los días, es para ti", "Deja de hacerlo a mano". Regla: prometer todo lo que el sistema hace y nada que no haga.
 
+- 2026-11-12. Titular del hero: "Estar al día no tiene que ser difícil." Bajada con la historia real del fundador ("Lo hice porque tuve un minimarket y no encontré un sistema simple, claro y barato"). Alternativas descartadas o pendientes: "Hecho por un dueño de minimarket. Para dueños de minimarket." y "El sistema que necesitaba mi minimarket. Ahora es tuyo." No afirmar "no hay sistemas así": no se puede respaldar. Pendiente: validar con 3 a 5 dueños.
+
 ## Registro de cambios
 
 - v1 (2026-11-12): primer borrador a partir del código, la web y las decisiones de esta conversación.
