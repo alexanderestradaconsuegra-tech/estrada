@@ -98,6 +98,8 @@ Pendiente: reseñas de Google, primeros clientes con permiso, cifras reales.
 
 - 2026-11-12. Decisión del dueño: usar en la landing y en los videos de demostración fotos reales de productos de marcas (Soprole, Coca-Cola, Watt's, El Jardín, Vital). Riesgo advertido: derechos de imagen de terceros. Pendiente: confirmar permiso o reemplazar por fotos propias o genéricas.
 
+- 2026-11-12. Diseño del hero: el dueño descartó el fondo oscuro azul marino con brillos turquesa porque se ve "hecho por IA". Nuevo sistema del hero: fondo papel cálido #F5F3EE, superficies blancas, texto #14171C y #565B63, líneas #E3E0D8, botón principal negro, un solo acento teal #0B7F66. Sin degradados de brillo, sin vidrio, sin neón. Pendiente: llevar el mismo sistema al resto de la página (hoy demo, planes y pie siguen oscuros).
+
 ## Registro de cambios
 
 - v1 (2026-11-12): primer borrador a partir del código, la web y las decisiones de esta conversación.
