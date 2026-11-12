@@ -100,6 +100,8 @@ Pendiente: reseñas de Google, primeros clientes con permiso, cifras reales.
 
 - 2026-11-12. Diseño del hero: el dueño descartó el fondo oscuro azul marino con brillos turquesa porque se ve "hecho por IA". Nuevo sistema del hero: fondo papel cálido #F5F3EE, superficies blancas, texto #14171C y #565B63, líneas #E3E0D8, botón principal negro, un solo acento teal #0B7F66. Sin degradados de brillo, sin vidrio, sin neón. Pendiente: llevar el mismo sistema al resto de la página (hoy demo, planes y pie siguen oscuros).
 
+- 2026-11-12. Hero rediseñado (dirección C "suizo directo" con boleta): papel #F1F1EE con cuadrícula, tinta #0E0E0E, señal naranja #FF4F1F solo en palabra clave, botón del menú y detalles, titular Manrope 800 gigante, precio $3.990 enorme, marco de video con sombra dura, boleta térmica de ejemplo ("Ejemplo de demostración"), etiquetas en JetBrains Mono. El dueño descartó las versiones previas por verse genéricas ("hecho por IA"). Pendiente: llevar el sistema al resto de la página (hoy el resto usa turquesa y secciones oscuras).
+
 ## Registro de cambios
 
 - v1 (2026-11-12): primer borrador a partir del código, la web y las decisiones de esta conversación.
