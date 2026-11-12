@@ -104,6 +104,8 @@ Pendiente: reseñas de Google, primeros clientes con permiso, cifras reales.
 
 - 2026-11-12. Cambio de precio decidido por el dueño: el precio de $3.990 se veía demasiado barato. Nuevo modelo: plan único con todo incluido (boleta SII incluida), normal $15.000 al mes, oferta de lanzamiento $8.990 al mes para quien contrate y pague este mes (hasta el 30-11-2026) y se mantiene mientras siga pagando. Se eliminó el módulo SII aparte y el pago anual. El aviso semanal de primera boleta (n8n) ya no sirve para cobrar un módulo; sirve para seguimiento comercial. Hero: se quitó la cuadrícula y el naranja; acento ahora es un marcador de marca detrás de "sale solo.".
 
+- 2026-11-12. Sistema de diseño extendido a toda la landing (papel #F1F1EE, tinta #0E0E0E, verde #22D3AB, esquinas rectas, líneas de tinta, sombra dura, etiquetas mono numeradas). Se eliminó la sección Demo (el video queda solo en el hero). La sección "servicios" pasó a ser una tabla "Lo que resuelve" (antes tachado / ahora con Merka POS) con 8 problemas y su solución real. Titulares más de venta: "Todo lo que hoy haces a mano, en un solo sistema", "Si vendes todos los días, es para ti", "Deja de hacerlo a mano". Regla: prometer todo lo que el sistema hace y nada que no haga.
+
 ## Registro de cambios
 
 - v1 (2026-11-12): primer borrador a partir del código, la web y las decisiones de esta conversación.
