@@ -80,6 +80,8 @@ Usar el flujo del dolor del cliente. Orden base:
 
 Mostrar siempre un dato con números del propio negocio del prospecto cuando se pueda.
 
+Guion completo con tiempos, frases y plan B para llamadas: ver `guion-demo-llamada.md` en esta misma carpeta.
+
 ## 7. Mensajes listos (WhatsApp)
 
 Primer contacto (inbound):
