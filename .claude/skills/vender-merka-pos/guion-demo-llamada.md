@@ -72,7 +72,7 @@ Decir:
 
 Aclarar siempre:
 - "La llave y los documentos los entrega Tuu. Lo mío es la integración dentro del sistema."
-- "El módulo cuesta $7.990 al mes con pago anual y se cobra desde que emites tu primera boleta."
+- "La boleta viene incluida en el plan. La llave la entrega Tuu."
 - "Necesitas inicio de actividades, firma electrónica y habilitar los documentos con Tuu, que demora de 3 a 7 días hábiles."
 - Si su máquina de tarjetas ya emite boleta: "Hay que dejarla en 'Sin documento' para que no se dupliquen."
 - "Qué ventas llevan boleta lo defines tú con tu contador."
@@ -113,8 +113,8 @@ Proponer la acción:
 "Lo mejor es que lo pruebes 30 días sin tarjeta con tus propios productos. ¿Te parece que hoy te dejo la cuenta lista y el viernes lo revisamos juntos en 10 minutos?"
 
 Dar el precio solo si lo preguntan o al cierre:
-- "Merka POS: $3.990 al mes con pago anual, $4.990 si pagas mes a mes."
-- "Con boleta SII: $7.990 con pago anual, $9.990 mes a mes."
+- "El plan es uno solo, con todo incluido: $15.000 al mes. Con la oferta de lanzamiento queda en $8.990 si contratas y pagas hasta el 30 de noviembre, y lo mantienes mientras sigas pagando."
+- "Durante la prueba no pagas nada."
 - "Durante la prueba no pagas nada. Antes de que termine, lo coordinamos por WhatsApp."
 
 Pedir el compromiso concreto: día y hora del seguimiento. Si dice "lo pienso": "Claro. ¿Qué te falta ver para decidir?" y anotar la respuesta.

@@ -13,8 +13,8 @@ Todo lo marcado `[POR CONFIRMAR]` no debe usarse en público hasta confirmarse.
 **Categoría (cómo lo buscan):** "punto de venta", "sistema POS", "programa para minimarket", "boleta electrónica".
 **Tipo:** SaaS por suscripción mensual.
 **Modelo y precios (pesos chilenos):**
-- Merka POS: $3.990 al mes con pago anual ($47.880 al año), $4.990 mes a mes. Precio de lanzamiento (antes $9.990 y $11.990).
-- Merka POS + Boleta SII: $7.990 con pago anual ($95.880 al año), $9.990 mes a mes. El módulo se cobra desde la primera boleta emitida en producción.
+- Plan único, todo incluido (con boleta SII): precio normal $15.000 al mes. Oferta de lanzamiento: $8.990 al mes si contrata y paga hasta el 30 de noviembre de 2026, y lo mantiene mientras siga pagando. Sin pago anual ni módulo aparte.
+- Hay que actualizar la fecha de término de la oferta en la web (hoy 30-11-2026, también en datos estructurados) y no extenderla indefinidamente: una oferta que se corre cada mes es urgencia falsa.
 - 30 días gratis, sin tarjeta, sin contrato.
 - La llave de API y los documentos los entrega Tuu. Con el terminal de Tuu la emisión es gratis; sin él, depende del plan del proveedor.
 **Alcance actual:** solo software. Sin venta de equipos, sin instalación en terreno, sin servicio de puesta en marcha de pago.
@@ -55,7 +55,7 @@ Precio muy bajo con boleta SII integrada. Venta por peso. Funciona en el navegad
 | Ya uso Excel o cuaderno | Funciona con poco volumen. Cuando el stock o la caja no cuadran ya se perdió plata |
 | El SII tiene sistema gratis | Sirve para boletas sueltas. Aquí sale sola al cobrar, descuenta stock y se anula con nota de crédito |
 | Mi máquina ya emite boleta | Se duplican. Dejar la máquina en "Sin documento" |
-| Es caro o barato | $3.990 son unos $133 al día. Preguntar cuánto pierde hoy |
+| Es caro o barato | $8.990 al mes son unos $300 al día. Preguntar cuánto pierde hoy |
 | Si se cae internet | Necesita conexión. Decirlo sin rodeos |
 | ¿Quién lo instala? | Por ahora solo software, funciona en el navegador |
 
@@ -101,6 +101,8 @@ Pendiente: reseñas de Google, primeros clientes con permiso, cifras reales.
 - 2026-11-12. Diseño del hero: el dueño descartó el fondo oscuro azul marino con brillos turquesa porque se ve "hecho por IA". Nuevo sistema del hero: fondo papel cálido #F5F3EE, superficies blancas, texto #14171C y #565B63, líneas #E3E0D8, botón principal negro, un solo acento teal #0B7F66. Sin degradados de brillo, sin vidrio, sin neón. Pendiente: llevar el mismo sistema al resto de la página (hoy demo, planes y pie siguen oscuros).
 
 - 2026-11-12. Hero rediseñado (dirección C "suizo directo" con boleta): papel #F1F1EE con cuadrícula, tinta #0E0E0E, señal naranja #FF4F1F solo en palabra clave, botón del menú y detalles, titular Manrope 800 gigante, precio $3.990 enorme, marco de video con sombra dura, boleta térmica de ejemplo ("Ejemplo de demostración"), etiquetas en JetBrains Mono. El dueño descartó las versiones previas por verse genéricas ("hecho por IA"). Pendiente: llevar el sistema al resto de la página (hoy el resto usa turquesa y secciones oscuras).
+
+- 2026-11-12. Cambio de precio decidido por el dueño: el precio de $3.990 se veía demasiado barato. Nuevo modelo: plan único con todo incluido (boleta SII incluida), normal $15.000 al mes, oferta de lanzamiento $8.990 al mes para quien contrate y pague este mes (hasta el 30-11-2026) y se mantiene mientras siga pagando. Se eliminó el módulo SII aparte y el pago anual. El aviso semanal de primera boleta (n8n) ya no sirve para cobrar un módulo; sirve para seguimiento comercial. Hero: se quitó la cuadrícula y el naranja; acento ahora es un marcador de marca detrás de "sale solo.".
 
 ## Registro de cambios
 

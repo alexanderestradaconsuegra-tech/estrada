@@ -81,7 +81,7 @@ Entregar la auditoría como tabla: sección, nota, problema, reescritura propues
 - Resultado en tres golpes: "Cuadra la caja. Emite la boleta. Sabe cuánto ganas."
 - Antes y después: "De la caja descuadrada al cierre en 2 minutos." (solo si el número es real)
 - Dolor y salida: "¿Boleta a mano y stock en cuaderno? Hazlo todo en un solo lugar."
-- Precio como ancla: "Desde $3.990 al mes. 30 días gratis."
+- Precio como ancla: "$8.990 al mes en la oferta de lanzamiento (normal $15.000). 30 días gratis."
 
 ## 9. Entregable al pedir copy
 

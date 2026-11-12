@@ -18,8 +18,8 @@ Regla: la venta es un negocio que vende más ordenado y en regla, no un software
 ## 2. Datos duros (no inventar otros)
 
 - Prueba: 30 días gratis, sin tarjeta, sin contrato. Se cancela cuando quiera.
-- Plan Merka POS: $3.990 al mes con pago anual ($47.880 al año), $4.990 si paga mes a mes. Precio de lanzamiento (antes $9.990 y $11.990).
-- Plan Merka POS + Boleta SII: $7.990 al mes con pago anual ($95.880 al año), $9.990 mes a mes. El módulo se cobra desde que el negocio emite su primera boleta, no antes.
+- Plan único Merka POS, todo incluido (con boleta SII): precio normal $15.000 al mes. Oferta de lanzamiento: $8.990 al mes si contrata y paga hasta el 30 de noviembre de 2026, y lo mantiene mientras siga pagando. Después del 30 de noviembre rige $15.000. Sin pago anual ni módulo aparte.
+- La boleta SII viene incluida. El costo de emisión y la llave los define Tuu según el plan del cliente.
 - La llave de API y los documentos los entrega Tuu (proveedor de emisión). El precio del módulo es por la integración dentro de Merka POS. El costo de emisión depende del plan del cliente con Tuu; con el terminal de Tuu la emisión es gratis, según lo publicado en la web.
 - Usuarios ilimitados con permisos. Un cajero no cambia la configuración ni elimina ventas.
 - Boleta: se emite al cobrar con los medios que el negocio marque (normalmente efectivo y tarjeta). Transferencia no emite boleta por decisión del negocio. Se imprime en 80 mm. Una venta con boleta se anula con nota de crédito.
@@ -60,8 +60,8 @@ Escuchar la respuesta 5: es el dolor que se usa en la demo y en el cierre.
 
 ## 5. Qué plan ofrecer
 
-- No emite boleta o no la necesita: Merka POS ($3.990).
-- Emite o quiere emitir boleta: Merka POS + Boleta SII ($7.990). Empezar siempre por la prueba gratis.
+- Todos entran al mismo plan. Si no necesita boleta, igual lo usa completo sin activarla.
+- Si emite o quiere emitir boleta: empezar siempre por la prueba gratis y orientarlo en firma y habilitación.
 - Tiene la firma y la habilitación lista: puede configurarlo hoy.
 - No tiene firma o habilitación: explicar los pasos (firma, habilitación con Tuu de 3 a 7 días hábiles, llave en Configuración) y que mientras tanto use el sistema sin boleta.
 - Su terminal ya emite boleta: avisar que podrían duplicarse; dejar el terminal en "Sin documento" y que Merka POS sea la única fuente.
@@ -99,15 +99,15 @@ Seguimiento día 7 (sin actividad):
 Cierre de prueba (día 25):
 "Tu prueba termina en unos días. ¿Seguimos con el plan [X]? Anual: $[monto] al mes. Mes a mes: $[monto]."
 
-Cobro del módulo SII (cuando emite su primera boleta):
-"Vi que ya emitiste tu primera boleta. A partir de ahora corre el módulo de boleta SII: $7.990 al mes con pago anual. Te explico cómo lo coordinamos."
+Recordatorio de la oferta (antes del 30 de noviembre):
+"Recuerda que la oferta de $8.990 al mes vale si contratas y pagas hasta el 30 de noviembre. Después el plan es de $15.000. ¿Lo dejamos listo hoy?"
 
 ## 8. Objeciones
 
 - "Ya uso Excel o cuaderno": "Funciona mientras vendes poco. Cuando el stock o la caja no cuadran, ya perdiste plata. Esto lo ordena solo y lo ves desde el celular."
 - "El SII tiene un sistema gratis": "Sí, y sirve para boletas sueltas. Aquí la boleta sale sola al cobrar, descuenta stock, cierra caja y se anula con nota de crédito sin hacerlo a mano."
 - "Mi máquina ya emite boleta": "Podrían duplicarse. Dejas la máquina para cobrar en 'Sin documento' y Merka POS emite una sola."
-- "Es caro": $3.990 son unos $133 al día. Comparar con una venta mal registrada o un descuadre. Preguntar cuánto pierde hoy.
+- "Es caro": $8.990 al mes son unos $300 al día (normal $15.000, unos $500 al día). Comparar con una venta mal registrada o un descuadre. Preguntar cuánto pierde hoy.
 - "Prefiero otro sistema conocido": no hablar mal de nadie. Preguntar qué paga y qué le falta. Diferenciar por precio, simpleza y venta por peso. Ofrecer probar en paralelo 30 días.
 - "No tengo tiempo para configurarlo": cargar los primeros productos desde el panel (hay importación) y empezar con lo básico. Orientación por WhatsApp.
 - "¿Y si se cae internet?": "Necesita conexión. Si se corta, lo ya cargado sigue visible, pero registrar ventas requiere internet." Decirlo sin rodeos.
