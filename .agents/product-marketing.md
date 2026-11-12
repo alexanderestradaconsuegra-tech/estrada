@@ -96,6 +96,8 @@ Pendiente: reseñas de Google, primeros clientes con permiso, cifras reales.
 - 2026-11-12. Decisión de producto: se vende solo software. Quedan fuera equipos, kits, instalación en terreno y puesta en marcha de pago.
 - 2026-11-12. El módulo SII se cobra desde la primera boleta emitida en producción. Cobro manual apoyado en un aviso semanal por WhatsApp (flujo n8n "Merka POS - Aviso semanal modulo boleta SII").
 
+- 2026-11-12. Decisión del dueño: usar en la landing y en los videos de demostración fotos reales de productos de marcas (Soprole, Coca-Cola, Watt's, El Jardín, Vital). Riesgo advertido: derechos de imagen de terceros. Pendiente: confirmar permiso o reemplazar por fotos propias o genéricas.
+
 ## Registro de cambios
 
 - v1 (2026-11-12): primer borrador a partir del código, la web y las decisiones de esta conversación.
