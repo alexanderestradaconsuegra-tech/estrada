@@ -92,7 +92,7 @@ Pendiente: reseñas de Google, primeros clientes con permiso, cifras reales.
 
 - 2026-11-12. Titular "Cuadra la caja. Emite la boleta. Sabe cuánto ganas." Descartado por el dueño: son tres promesas, "Sabe" suena mal como orden y se escribió sin hablar con clientes. Lección: no escribir titulares sin lenguaje real del cliente. Alternativas pendientes de validar: precio con boleta; peso con boleta; control desde el celular; prueba con tus propios productos.
 - 2026-11-12. Se detectó en el texto de la web el patrón "No solo X: Y" (contraste que revela). Evitar.
-- 2026-11-12. Alerta de precio: la biblioteca de marketing advierte contra el precio ultra bajo (la trampa del precio de $9). $3.990 al mes está por debajo de lo habitual para un software de negocio. Decisión pendiente del dueño: mantener como precio de lanzamiento con fecha de término, o probar un plan base más alto. Registrar el resultado cuando haya datos.
+- 2026-11-12. Alerta de precio: la biblioteca de marketing advierte contra el precio ultra bajo (la trampa del precio de $9). $3.990 al mes está por debajo de lo habitual para un software de negocio. Decisión del dueño (2026-11-12): mantener $3.990 como precio de lanzamiento y probar además un precio más alto. Pendiente: fecha real de término del lanzamiento y diseño de la prueba por cohortes. Registrar el resultado cuando haya datos.
 - 2026-11-12. Decisión de producto: se vende solo software. Quedan fuera equipos, kits, instalación en terreno y puesta en marcha de pago.
 - 2026-11-12. El módulo SII se cobra desde la primera boleta emitida en producción. Cobro manual apoyado en un aviso semanal por WhatsApp (flujo n8n "Merka POS - Aviso semanal modulo boleta SII").
 
