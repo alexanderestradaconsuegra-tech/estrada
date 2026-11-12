@@ -1,0 +1,8 @@
+.git
+.gitignore
+.agents
+.claude
+CLAUDE.md
+skills
+sql
+*.md
