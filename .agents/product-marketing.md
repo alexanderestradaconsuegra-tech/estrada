@@ -1,0 +1,101 @@
+# Contexto de marketing: Merka POS
+
+**Versión del documento:** v1
+**Última actualización:** 2026-11-12
+**Responsable:** Alexander Estrada (Autix)
+
+Todo lo marcado `[POR CONFIRMAR]` no debe usarse en público hasta confirmarse.
+
+## Producto
+
+**Una línea:** punto de venta en la nube con boleta electrónica del SII para comercios de Chile.
+**Qué hace:** el negocio cobra desde el navegador (celular, tablet o computador), el stock baja con cada venta, la caja se cierra por turno, y con el módulo opcional la boleta electrónica del SII sale al cobrar (a través de Tuu) y se anula con nota de crédito.
+**Categoría (cómo lo buscan):** "punto de venta", "sistema POS", "programa para minimarket", "boleta electrónica".
+**Tipo:** SaaS por suscripción mensual.
+**Modelo y precios (pesos chilenos):**
+- Merka POS: $3.990 al mes con pago anual ($47.880 al año), $4.990 mes a mes. Precio de lanzamiento (antes $9.990 y $11.990).
+- Merka POS + Boleta SII: $7.990 con pago anual ($95.880 al año), $9.990 mes a mes. El módulo se cobra desde la primera boleta emitida en producción.
+- 30 días gratis, sin tarjeta, sin contrato.
+- La llave de API y los documentos los entrega Tuu. Con el terminal de Tuu la emisión es gratis; sin él, depende del plan del proveedor.
+**Alcance actual:** solo software. Sin venta de equipos, sin instalación en terreno, sin servicio de puesta en marcha de pago.
+
+## Funciones reales hoy
+
+Terminal de ventas (efectivo, tarjeta, transferencia, mixto), venta por peso con balanza EAN-13, inventario con alertas y precios por volumen, reportes con ganancia neta, crédito a clientes, cuentas por pagar a proveedores, cierre de caja por turno, panel de control, permisos por usuario con registro de auditoría, usuarios ilimitados, importación y exportación, boleta electrónica (PDF de 80 mm, nota de crédito, medios que emiten configurables), llave de boleta cifrada.
+
+## Límites (decirlos con claridad)
+
+Necesita internet para registrar y sincronizar. Solo boleta y nota de crédito: no emite facturas ni guías. La transferencia no emite boleta por decisión del negocio. No hay instalación en terreno. No es asesoría tributaria.
+
+## Cliente
+
+**Negocios objetivo:** minimarkets, almacenes, queserías, carnicerías, fiambrerías, botillerías, panaderías, ferreterías pequeñas, en Chile.
+**Quién decide:** el dueño, que muchas veces atiende o supervisa la caja.
+**Trabajos que contrata (por confirmar con entrevistas):**
+- Saber cuánto gana de verdad y cuánto le falta por reponer. [POR CONFIRMAR]
+- Emitir boleta sin hacerla a mano en otro sistema. [POR CONFIRMAR]
+- Cobrar rápido y que la caja cuadre al cierre. [POR CONFIRMAR]
+- Vender por peso sin calculadora (quesería, carnicería). [POR CONFIRMAR]
+**Anti-cliente:** quien necesita facturación electrónica completa, quien no tiene internet estable, quien busca que alguien le instale todo, multi-sucursal compleja con bodegas.
+
+## Competencia
+
+- Directos: otros sistemas POS con boleta electrónica en Chile (por ejemplo Bsale y Tivendo de Defontana). Precios y promesas actuales [POR CONFIRMAR] en sus sitios oficiales.
+- Secundarios: la herramienta gratuita de boletas del SII; el panel de Tuu (Haulmer) para emitir; AgendaPro POS ($20.000 + IVA al mes, terminal pensado para belleza, según un artículo de AgendaPro).
+- Indirectos: Excel, cuaderno, calculadora, "de memoria".
+
+## Diferenciación (por validar con clientes)
+
+Precio muy bajo con boleta SII integrada. Venta por peso. Funciona en el navegador sin instalar. Soporte por WhatsApp. Pensado para el mostrador chileno. Cuidado: el precio ultra bajo puede atrapar el precio hacia abajo (ver Aprendizajes).
+
+## Objeciones frecuentes y respuesta
+
+| Objeción | Respuesta |
+|---|---|
+| Ya uso Excel o cuaderno | Funciona con poco volumen. Cuando el stock o la caja no cuadran ya se perdió plata |
+| El SII tiene sistema gratis | Sirve para boletas sueltas. Aquí sale sola al cobrar, descuenta stock y se anula con nota de crédito |
+| Mi máquina ya emite boleta | Se duplican. Dejar la máquina en "Sin documento" |
+| Es caro o barato | $3.990 son unos $133 al día. Preguntar cuánto pierde hoy |
+| Si se cae internet | Necesita conexión. Decirlo sin rodeos |
+| ¿Quién lo instala? | Por ahora solo software, funciona en el navegador |
+
+## Dinámica de cambio (cuatro fuerzas) [POR CONFIRMAR con entrevistas]
+
+- Empuje: [POR CONFIRMAR]
+- Atracción: boleta integrada, precio, prueba gratis sin tarjeta.
+- Hábito: Excel, cuaderno o el panel del proveedor ya conocido.
+- Ansiedad: perder los datos, que el sistema se caiga, equivocarse con el SII.
+
+## Lenguaje del cliente
+
+Pendiente: llenar con frases textuales de dueños de negocio (entrevistas, WhatsApp, reseñas). Hasta entonces, no asumir cómo lo dicen.
+Palabras a usar: caja, mostrador, boleta, kilo, granel, fiado, stock, cierre.
+Palabras a evitar: solución integral, potente, robusto, optimiza, sinergia, ecosistema.
+
+## Voz de marca
+
+Directa, honesta, cercana, sin adornos. Tú. Frases cortas. Sin emojis. Dice lo que el producto no hace. No promete lo que depende de terceros.
+
+## Pruebas disponibles
+
+Ninguna cifra, reseña ni cliente citable por ahora. Disponibles: 30 días gratis sin tarjeta, seguridad (conexión cifrada, llave cifrada, permisos, registro de acciones, datos separados por negocio, sin datos de tarjetas), videos reales del sistema.
+Pendiente: reseñas de Google, primeros clientes con permiso, cifras reales.
+
+## Metas
+
+**Principal:** cuentas que pasan de prueba a pago.
+**Acción de conversión:** "Probar 30 días gratis" en app.merkapos.pro.
+**Secundaria:** consultas por WhatsApp (+56 9 9202 5527).
+**Métricas a seguir:** visitas, clics en probar, cuentas creadas, cuentas con 20 ventas en la primera semana, pagos, tiempo a la primera boleta real.
+
+## Aprendizajes
+
+- 2026-11-12. Titular "Cuadra la caja. Emite la boleta. Sabe cuánto ganas." Descartado por el dueño: son tres promesas, "Sabe" suena mal como orden y se escribió sin hablar con clientes. Lección: no escribir titulares sin lenguaje real del cliente. Alternativas pendientes de validar: precio con boleta; peso con boleta; control desde el celular; prueba con tus propios productos.
+- 2026-11-12. Se detectó en el texto de la web el patrón "No solo X: Y" (contraste que revela). Evitar.
+- 2026-11-12. Alerta de precio: la biblioteca de marketing advierte contra el precio ultra bajo (la trampa del precio de $9). $3.990 al mes está por debajo de lo habitual para un software de negocio. Decisión pendiente del dueño: mantener como precio de lanzamiento con fecha de término, o probar un plan base más alto. Registrar el resultado cuando haya datos.
+- 2026-11-12. Decisión de producto: se vende solo software. Quedan fuera equipos, kits, instalación en terreno y puesta en marcha de pago.
+- 2026-11-12. El módulo SII se cobra desde la primera boleta emitida en producción. Cobro manual apoyado en un aviso semanal por WhatsApp (flujo n8n "Merka POS - Aviso semanal modulo boleta SII").
+
+## Registro de cambios
+
+- v1 (2026-11-12): primer borrador a partir del código, la web y las decisiones de esta conversación.

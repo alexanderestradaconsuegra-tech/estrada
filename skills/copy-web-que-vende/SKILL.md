@@ -5,6 +5,8 @@ description: Escribir y auditar el texto de páginas web para que vendan de verd
 
 # Copy web que vende
 
+Esta skill es la especialización de redacción web de `marketing-autix`. Antes de usarla, leer `marketing-autix` y `.agents/product-marketing.md`. Si hay conflicto, manda `marketing-autix`. Paso obligatorio antes de escribir un titular: tener frases reales del cliente (ver sección 6 de `marketing-autix`). Si no las hay, entregar 3 alternativas y pedir validación, sin cambiar el sitio.
+
 Objetivo: que quien llega a la página entienda en 5 segundos qué gana, confíe en que es verdad y sepa cuál es el siguiente paso. Todo lo demás es decoración.
 
 ## 1. Orden de trabajo (no escribir antes de terminar los pasos 1 a 3)
