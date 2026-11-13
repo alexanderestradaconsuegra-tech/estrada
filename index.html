@@ -1559,6 +1559,23 @@ a[onclick^="showRecover"]{display:inline-block;padding:10px 8px;}
 .dte-medios-t{width:100%;font-size:12px;font-weight:700;color:var(--muted)}
 .dte-medio{display:inline-flex;gap:8px;align-items:center;font-size:13px;cursor:pointer;min-height:32px;text-transform:none!important;letter-spacing:0!important;font-family:var(--sans)!important;font-weight:500}
 .dte-note{font-size:11.5px;line-height:1.55;color:var(--muted);margin-top:14px}
+
+/* contraseñas: ojo, mayusculas, fuerza */
+.pw-wrap{position:relative;display:block}
+.pw-wrap>input{padding-right:46px!important}
+.pw-eye{position:absolute;right:6px;bottom:6px;width:38px;height:38px;border:0;background:transparent;color:var(--muted);cursor:pointer;display:grid;place-items:center;border-radius:8px}
+.pw-eye:hover{color:var(--text);background:var(--sur2)}
+.pw-eye:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.pw-eye svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.pw-caps{font:600 11.5px/1.3 var(--mono);color:#b45309;margin-top:6px;display:none}
+.pw-caps.on{display:block}
+.pw-meter{margin-top:8px}
+.pw-bar{height:5px;border-radius:99px;background:var(--bdr);overflow:hidden}
+.pw-bar i{display:block;height:100%;width:0;border-radius:99px;background:var(--red);transition:width .2s,background .2s}
+.pw-list{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:3px;font-size:12px;color:var(--muted)}
+.pw-list li::before{content:"○ ";color:var(--muted)}
+.pw-list li.ok{color:var(--acc)}
+.pw-list li.ok::before{content:"✓ ";color:var(--acc)}
 </style>
 </head>
 <body>
@@ -1599,15 +1616,7 @@ a[onclick^="showRecover"]{display:inline-block;padding:10px 8px;}
         <div class="login-error" id="auth-error" style="margin-bottom:10px"></div>
         <button class="btn btn-primary btn-lg" style="width:100%" onclick="authLogin()" id="auth-btn">Acceder →</button>
         <div style="text-align:center;margin-top:12px;"><a href="#" onclick="showRecover();return false;" style="font-size:12px;color:var(--muted);text-decoration:underline;">¿Olvidaste tu contraseña o tu ID de negocio?</a></div>
-        <div style="display:flex;align-items:center;gap:10px;margin-top:14px;">
-          <div style="flex:1;height:1px;background:var(--bdr);"></div>
-          <span style="font-size:11px;color:var(--muted);font-family:var(--mono);">o</span>
-          <div style="flex:1;height:1px;background:var(--bdr);"></div>
-        </div>
-        <button class="btn btn-ghost btn-lg" style="width:100%;margin-top:14px;border-color:var(--acc-bdr);color:var(--acc);" onclick="enterDemoMode()">
-          <i class=ic-eye></i> Ver demo sin registrarme
-        </button>
-      </div>
+              </div>
 
       <!-- REGISTER FORM -->
       <div id="register-form" style="display:none">
@@ -1626,7 +1635,7 @@ a[onclick^="showRecover"]{display:inline-block;padding:10px 8px;}
           </div>
           <div>
             <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono)">Contraseña</label>
-            <input id="reg-pass" type="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password"
+            <input id="reg-pass" type="password" placeholder="Mínimo 10 caracteres" autocomplete="new-password"
               style="width:100%;margin-top:6px;padding:11px 14px;border:1.5px solid var(--bdr);border-radius:var(--radius-sm);background:var(--sur2);color:var(--text);font-size:14px;outline:none"
               onkeydown="if(event.key==='Enter')authRegister()">
           </div>
@@ -1652,7 +1661,7 @@ a[onclick^="showRecover"]{display:inline-block;padding:10px 8px;}
       <!-- NUEVA CONTRASEÑA (desde el enlace del correo) -->
       <div id="reset-form" style="display:none">
         <div class="login-h" style="margin-bottom:6px">Crea tu nueva contraseña</div>
-        <div class="login-sub" style="margin-bottom:16px">Mínimo 8 caracteres. Al guardarla se cerrarán las sesiones abiertas.</div>
+        <div class="login-sub" style="margin-bottom:16px">Mínimo 10 caracteres, con mayúscula, minúscula y número. Al guardarla se cerrarán las sesiones abiertas.</div>
         <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
           <div><label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono)">Nueva contraseña</label><input id="rst-pass" type="password" autocomplete="new-password" style="width:100%;margin-top:6px;padding:11px 14px;border:1.5px solid var(--bdr);border-radius:var(--radius-sm);background:var(--sur2);color:var(--text);font-size:14px;outline:none"></div>
           <div><label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono)">Repite la contraseña</label><input id="rst-pass2" type="password" autocomplete="new-password" style="width:100%;margin-top:6px;padding:11px 14px;border:1.5px solid var(--bdr);border-radius:var(--radius-sm);background:var(--sur2);color:var(--text);font-size:14px;outline:none" onkeydown="if(event.key==='Enter')doReset()"></div>
@@ -4829,7 +4838,7 @@ async function doReset(){
   const msg = document.getElementById('rst-msg'); const btn = document.getElementById('rst-btn');
   msg.style.color = 'var(--red)';
   if(!_resetCtx){ msg.textContent = 'Enlace inválido. Solicita uno nuevo.'; return; }
-  if(p1.length < 8){ msg.textContent = 'La contraseña debe tener al menos 8 caracteres'; return; }
+  { const _pe = passwordIssues(p1, ''); if(_pe.length){ msg.textContent = 'Contraseña: falta ' + _pe.join(', '); return; } }
   if(p1 !== p2){ msg.textContent = 'Las contraseñas no coinciden'; return; }
   btn.disabled = true; btn.textContent = 'Guardando...';
   const res = await API.call(ENDPOINTS.reset, { org_id: _resetCtx.org, token: _resetCtx.token, password: p1 });
@@ -4866,7 +4875,7 @@ async function authRegister(){
   const errEl = document.getElementById('reg-error');
   const btn = document.getElementById('reg-btn');
   if(!nombre || !email || !pass){ if(errEl) errEl.textContent='Completa todos los campos'; return; }
-  if(pass.length < 8){ if(errEl) errEl.textContent='La contraseña debe tener al menos 8 caracteres'; return; }
+  { const _pe = passwordIssues(pass, email); if(_pe.length){ if(errEl) errEl.textContent='Contraseña: falta ' + _pe.join(', '); return; } }
   if(!email.includes('@')){ if(errEl) errEl.textContent='Correo electrónico inválido'; return; }
   if(btn){ btn.textContent='Creando cuenta...'; btn.disabled=true; }
   if(errEl) errEl.textContent='';
@@ -5008,7 +5017,12 @@ async function authLogin(){
         renderLoginCashiers('loginCashierList','selectLoginUser');
       }
     } else {
-      if(errEl) errEl.textContent='ID o contraseña incorrectos';
+      if(errEl){
+        errEl.style.color = 'var(--red)';
+        if(resData && resData.bloqueado) errEl.textContent = 'Demasiados intentos. Espera 15 minutos o recupera tu contraseña.';
+        else if(resData && typeof resData.restantes === 'number') errEl.textContent = 'ID o contraseña incorrectos. ' + (resData.restantes > 0 ? 'Te quedan ' + resData.restantes + (resData.restantes === 1 ? ' intento.' : ' intentos.') : 'Ya no te quedan intentos: espera 15 minutos o recupera tu contraseña.');
+        else errEl.textContent = 'ID o contraseña incorrectos';
+      }
     }
   } catch(e){
     if(errEl) errEl.textContent='Error de conexión. Intenta de nuevo.';
@@ -6676,6 +6690,68 @@ function dteUsarDemo(){
   dteProbar();
 }
 
+
+// ═══ CONTRASEÑAS: ojo, mayúsculas, requisitos y fuerza ═══
+const PW_COMUNES = ['password','contrasena','contraseña','123456','qwerty','merka','minimarket','abc123','admin','letmein','welcome','iloveyou','chile','santiago','11111','00000'];
+function passwordIssues(p, email){
+  const out = [];
+  if(p.length < 10) out.push('10 caracteres o más');
+  if(!/[a-z]/.test(p)) out.push('una minúscula');
+  if(!/[A-Z]/.test(p)) out.push('una mayúscula');
+  if(!/[0-9]/.test(p)) out.push('un número');
+  const low = p.toLowerCase();
+  if(p && PW_COMUNES.some(c => low.includes(c))) out.push('evitar palabras comunes (password, 123456, merka…)');
+  const local = String(email||'').split('@')[0].toLowerCase();
+  if(local.length >= 4 && low.includes(local)) out.push('no usar tu correo');
+  return out;
+}
+function pwScore(p){
+  let n = 0;
+  if(p.length >= 10) n++; if(p.length >= 14) n++;
+  if(/[a-z]/.test(p) && /[A-Z]/.test(p)) n++;
+  if(/[0-9]/.test(p)) n++; if(/[^A-Za-z0-9]/.test(p)) n++;
+  return n;
+}
+function initPasswordFields(){
+  const EYE='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const EYE_OFF='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.7 10.7 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.2M6.6 6.6A17.5 17.5 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 4-.8"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
+  document.querySelectorAll('.login-card input[type="password"]').forEach(inp=>{
+    if(inp.dataset.pw) return; inp.dataset.pw = '1';
+    const wrap = document.createElement('div'); wrap.className = 'pw-wrap';
+    inp.parentNode.insertBefore(wrap, inp); wrap.appendChild(inp);
+    const btn = document.createElement('button'); btn.type='button'; btn.className='pw-eye';
+    btn.setAttribute('aria-label','Mostrar contraseña'); btn.setAttribute('aria-pressed','false'); btn.innerHTML = EYE;
+    btn.addEventListener('click', ()=>{
+      const show = inp.type === 'password'; inp.type = show ? 'text' : 'password';
+      btn.innerHTML = show ? EYE_OFF : EYE; btn.setAttribute('aria-pressed', String(show));
+      btn.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña'); inp.focus();
+    });
+    wrap.appendChild(btn);
+    const caps = document.createElement('div'); caps.className='pw-caps'; caps.textContent='Bloq Mayús está activado'; wrap.after(caps);
+    const chk = e => { if(e.getModifierState) caps.classList.toggle('on', e.getModifierState('CapsLock')); };
+    inp.addEventListener('keydown', chk); inp.addEventListener('keyup', chk); inp.addEventListener('blur', ()=>caps.classList.remove('on'));
+    if(inp.id === 'reg-pass' || inp.id === 'rst-pass'){
+      const meter = document.createElement('div'); meter.className='pw-meter';
+      meter.innerHTML = '<div class="pw-bar"><i></i></div><ul class="pw-list"></ul>';
+      caps.after(meter);
+      const bar = meter.querySelector('i'), list = meter.querySelector('ul');
+      const REQ = [['10 caracteres o más', p=>p.length>=10],['una mayúscula', p=>/[A-Z]/.test(p)],['una minúscula', p=>/[a-z]/.test(p)],['un número', p=>/[0-9]/.test(p)]];
+      const upd = ()=>{
+        const p = inp.value, em = document.getElementById('reg-email')?.value || '';
+        const bad = new Set(passwordIssues(p, inp.id==='reg-pass' ? em : ''));
+        list.innerHTML = REQ.map(([t,f])=>'<li class="'+(f(p)?'ok':'')+'">'+t+'</li>').join('') + (p && [...bad].some(x=>/comunes|correo/.test(x)) ? '<li>'+[...bad].filter(x=>/comunes|correo/.test(x)).join(', ')+'</li>' : '');
+        const sc = p ? Math.max(1, pwScore(p)) : 0;
+        bar.style.width = (sc*20)+'%'; bar.style.background = sc<=2 ? 'var(--red)' : sc===3 ? '#d97706' : 'var(--acc)';
+      };
+      inp.addEventListener('input', upd); upd();
+    }
+  });
+}
+function openFromUrl(){
+  const q = new URLSearchParams(location.search);
+  if(q.get('registro') === '1'){ switchLoginTab('register'); history.replaceState(null,'',location.pathname); }
+}
+
 // ═══ INIT ═══
 async function init(){
   initTheme();
@@ -6700,6 +6776,8 @@ async function init(){
   document.getElementById('topbarDate').textContent = todayLabel();
   updateLogoElements();
   showResetFromUrl();
+  initPasswordFields();
+  openFromUrl();
   // If org_id already stored, pre-fill
   const storedOrg = sessionStorage.getItem('merka_org_id');
   if(storedOrg && document.getElementById('auth-orgid')){
